@@ -7,5 +7,10 @@
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "hono": "^4.4.3",
+    "pg": "^8.11.5",
+    "pg-pool": "^3.6.2"
   }
 }

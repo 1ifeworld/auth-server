@@ -221,6 +221,8 @@ app.post("/signAndEncryptKeys", async (c) => {
 
     // Verify the signed message
     const isValid = verifyMessage(message, signedMessage, Buffer.from(publicKey).toString("hex"))
+    console.log(Buffer.from(publicKey).toString("hex"))
+    console.log(isValid)
     if (!isValid) {
       return c.json({ success: false, message: "Invalid signature" }, 400)
     }

@@ -1,6 +1,6 @@
 import pg from "pg"
 import { Hono } from "hono"
-import { ed25519, ed25519ph } from "@noble/curves/ed25519"
+import { ed25519, ed25519ph} from "@noble/curves/ed25519"
 import { blake3 } from "@noble/hashes/blake3"
 import AWS from 'aws-sdk'
 import { TextEncoder } from 'util'
@@ -22,8 +22,6 @@ if (!KEY_REF) {
 }
 
 const kms = new AWS.KMS()
-
-
 
 
 const privateKey = ed25519.utils.randomPrivateKey()
@@ -59,58 +57,17 @@ function isSignatureResponse(data: any): data is SignatureResponse {
  * @param message The message to sign.
  * @returns The signature.
  */
-export function signMessage(message: string) {
+function signMessage(message: string) {
   const msg = new TextEncoder().encode(message)
   const sig = ed25519.sign(msg, privKeyBytes)
-  return {
-    sig: Buffer.from(sig).toString("hex"),
-    signer: USER_ID_1_PUB_KEY,
-  }
+  return Buffer.from(sig).toString('hex')
 }
-app.post("/signAndEncryptKeys", async (c) => {
-  try {
-    const { message } = await c.req.json()
 
-    if (!message) {
-      return c.json({ success: false, message: "No message provided" }, 400)
-    }
-
-    // Encrypt the private key using AWS KMS
-    const encryptedPrivateKey = await kms.encrypt({
-      KeyId: KEY_REF,
-      Plaintext: privKeyBytes
-    }).promise()
-
-    // Encrypt the public key using AWS KMS
-    const encryptedPublicKey = await kms.encrypt({
-      KeyId: KEY_REF,
-      Plaintext: publicKey
-    }).promise()
-
-        // Check if encryption was successful
-        if (!encryptedPrivateKey.CiphertextBlob || !encryptedPublicKey.CiphertextBlob) {
-          throw new Error("Encryption failed")
-        }
-    
-
-    // Sign the message
-    const signedMessage = signMessage(message)
-
-    return c.json({
-      success: true,
-      signedMessage,
-      encryptedPrivateKey: encryptedPrivateKey.CiphertextBlob.toString('base64'),
-      encryptedPublicKey: encryptedPublicKey.CiphertextBlob.toString('base64')
-    })
-  } catch (error: unknown) {
-    let errorMessage = 'An unknown error occurred'
-    if (error instanceof Error) {
-      errorMessage = error.message
-    }
-    return c.json({ success: false, message: errorMessage }, 500)
-  }
-})
-
+function signMessageWithKey(message: string, privateKey: Uint8Array): string {
+  const msg = new TextEncoder().encode(message)
+  const sig = ed25519.sign(msg, privateKey)
+  return Buffer.from(sig).toString("hex")
+}
 
 /**
  * Verify a signed message using the public key.
@@ -129,6 +86,7 @@ export function verifyMessage(
   const pub = Buffer.from(pubKey, "hex")
   return ed25519.verify(sig, msg, pub)
 }
+
 
 
 const listenClient = new Client({
@@ -169,7 +127,17 @@ async function ensureTableExists() {
           block_num NUMERIC
         )
       `
+
+  const createHashesTableQuery = `
+      CREATE TABLE IF NOT EXISTS public.hashes (
+        userid SERIAL PRIMARY KEY,
+        custodyaddress TEXT,
+        encryptedPublicKey BYTEA,
+        encryptedPrivateKey BYTEA
+      )
+    `   
     await writeClient.query(createTableQuery)
+    await writeClient.query(createHashesTableQuery)
     await writeClient.query("COMMIT")
     console.log("Schema and table verified/created successfully")
   } catch (err) {
@@ -219,28 +187,171 @@ async function checkAndReplicateData() {
   }
 }
 
-
 app.post("/signMessage", async (c) => {
-  console.log("recieved sign message req")
   try {
     const { message } = await c.req.json()
-
-    console.log("what was incoming message in signMEssage", message)
 
     if (!message) {
       return c.json({ success: false, message: "No message provided" }, 400)
     }
 
-    // Sign the message
-    const msg = new TextEncoder().encode(message)
-    const sig = ed25519.sign(msg, privKeyBytes)
-    const signedMessage = Buffer.from(sig).toString("hex")
-    const wasVerified = verifyMessage("message", signedMessage, Buffer.from(USER_ID_1_PUB_KEY).toString("hex"))
-    console.log("verify message inside of /signMessage =", wasVerified)
-  
-    return c.json({ success: true, signedMessage, publicKey: Buffer.from(USER_ID_1_PUB_KEY).toString("hex") })
-  } catch (error) {
-    return c.json({ success: false, message: error }, 500)
+    const signedMessage = signMessage(message)
+
+    return c.json({
+      success: true,
+      message,
+      signedMessage,
+    })
+  } catch (error: unknown) {
+    let errorMessage = "An unknown error occurred"
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    return c.json({ success: false, message: errorMessage }, 500)
+  }
+})
+
+app.post("/signAndEncryptKeys", async (c) => {
+  try {
+    const { message, signedMessage, custodyAddress } = await c.req.json()
+
+    if (!message || !signedMessage || !custodyAddress) {
+      return c.json({ success: false, message: "Missing parameters" }, 400)
+    }
+
+    // Verify the signed message
+    const isValid = verifyMessage(message, signedMessage, Buffer.from(publicKey).toString("hex"))
+    if (!isValid) {
+      return c.json({ success: false, message: "Invalid signature" }, 400)
+    }
+
+    // Generate EDDSA key pair
+    const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
+    const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
+
+    // Encrypt the EDDSA private key using AWS KMS
+    const encryptedPrivateKey = await kms
+      .encrypt({
+        KeyId: KEY_REF,
+        Plaintext: Buffer.from(eddsaPrivateKey),
+      })
+      .promise()
+
+    // Encrypt the EDDSA public key using AWS KMS
+    const encryptedPublicKey = await kms
+      .encrypt({
+        KeyId: KEY_REF,
+        Plaintext: Buffer.from(eddsaPublicKey),
+      })
+      .promise()
+
+    // Check if encryption was successful
+    if (!encryptedPrivateKey.CiphertextBlob || !encryptedPublicKey.CiphertextBlob) {
+      throw new Error("Encryption failed")
+    }
+
+    // Store encrypted keys in the database
+    const insertQuery = `
+      INSERT INTO public.hashes (custodyAddress, encryptedPrivateKey, encryptedPublicKey)
+      VALUES ($1, $2, $3)
+      RETURNING userId
+    `
+    const result = await writeClient.query(insertQuery, [
+      custodyAddress,
+      encryptedPrivateKey.CiphertextBlob,
+      encryptedPublicKey.CiphertextBlob,
+    ])
+    const userId = result.rows[0].userid
+
+    return c.json({
+      success: true,
+      userId,
+      encryptedPrivateKey: encryptedPrivateKey.CiphertextBlob.toString("base64"),
+      encryptedPublicKey: encryptedPublicKey.CiphertextBlob.toString("base64"),
+    })
+  } catch (error: unknown) {
+    let errorMessage = "An unknown error occurred"
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    return c.json({ success: false, message: errorMessage }, 500)
+  }
+})
+
+app.post("/signWithDecryptedKeys", async (c) => {
+  try {
+    const { userId, message, signedMessage, newMessage } = await c.req.json()
+
+    if (!userId || !message || !signedMessage || !newMessage) {
+      return c.json({ success: false, message: "Missing parameters" }, 400)
+    }
+
+    // Retrieve the stored encrypted keys
+    const selectQuery = `
+      SELECT custodyAddress, encryptedPrivateKey, encryptedPublicKey
+      FROM public.hashes
+      WHERE userId = $1
+    `
+    const result = await writeClient.query(selectQuery, [userId])
+
+    if (result.rows.length === 0) {
+      return c.json({ success: false, message: "User not found" }, 404)
+    }
+
+    const { custodyAddress, encryptedPrivateKey, encryptedPublicKey } = result.rows[0]
+
+    // Verify the signed message
+    const isValid = verifyMessage(message, signedMessage, Buffer.from(publicKey).toString("hex"))
+    if (!isValid) {
+      return c.json({ success: false, message: "Invalid signature" }, 400)
+    }
+
+    // Decrypt the private key using AWS KMS
+    const decryptedPrivateKey = await kms
+      .decrypt({
+        CiphertextBlob: encryptedPrivateKey,
+      })
+      .promise()
+
+    // Decrypt the public key using AWS KMS
+    const decryptedPublicKey = await kms
+      .decrypt({
+        CiphertextBlob: encryptedPublicKey,
+      })
+      .promise()
+
+    // Check if decryption was successful
+    if (!decryptedPrivateKey.Plaintext || !decryptedPublicKey.Plaintext) {
+      throw new Error("Decryption failed")
+    }
+
+    // Sign the new message with the decrypted EDDSA private key
+    const eddsaPrivateKey = new Uint8Array(decryptedPrivateKey.Plaintext as ArrayBuffer)
+    const signedNewMessage = signMessageWithKey(newMessage, eddsaPrivateKey)
+
+    // Re-encrypt the private key using AWS KMS
+    const reEncryptedPrivateKey = await kms
+      .encrypt({
+        KeyId: KEY_REF,
+        Plaintext: Buffer.from(eddsaPrivateKey),
+      })
+      .promise()
+
+    if (!reEncryptedPrivateKey.CiphertextBlob) {
+      throw new Error("Re-encryption failed")
+    }
+
+    return c.json({
+      success: true,
+      signedNewMessage,
+      reEncryptedPrivateKey: reEncryptedPrivateKey.CiphertextBlob.toString("base64"),
+    })
+  } catch (error: unknown) {
+    let errorMessage = "An unknown error occurred"
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    return c.json({ success: false, message: errorMessage }, 500)
   }
 })
 

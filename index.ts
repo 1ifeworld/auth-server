@@ -338,7 +338,7 @@ app.post("/signWithDecryptedKeys", async (c) => {
 
     // Decrypt the public key using AWS KMS
     const decryptedPublicKey = await kms.decrypt({
-      CiphertextBlob: encryptedPublicKeyBuffer,
+      CiphertextBlob: encryptedPublicKey,
     }).promise()
 
     console.log({decryptedPublicKey})

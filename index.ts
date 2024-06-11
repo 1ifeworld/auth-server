@@ -2,6 +2,9 @@ import pg from "pg"
 import { Hono } from "hono"
 import { ed25519, ed25519ph } from "@noble/curves/ed25519"
 import { blake3 } from "@noble/hashes/blake3"
+import AWS from 'aws-sdk'
+import { TextEncoder } from 'util'
+
 
 const app = new Hono()
 
@@ -11,6 +14,17 @@ const MESSAGE = JSON.stringify({ userId: "1", channelId: "9" })
 
 const listenConnectionString = process.env.LISTEN_DATABASE_URL
 const writeConnectionString = process.env.WRITE_DATABASE_URL
+
+const KEY_REF = process.env.KEY_REF
+
+if (!KEY_REF) {
+  throw new Error("KEY_REF environment variable is not defined")
+}
+
+const kms = new AWS.KMS()
+
+
+
 
 const privateKey = ed25519.utils.randomPrivateKey()
 const publicKey = ed25519.getPublicKey(privateKey)
@@ -53,6 +67,50 @@ export function signMessage(message: string) {
     signer: USER_ID_1_PUB_KEY,
   }
 }
+app.post("/signAndEncryptKeys", async (c) => {
+  try {
+    const { message } = await c.req.json()
+
+    if (!message) {
+      return c.json({ success: false, message: "No message provided" }, 400)
+    }
+
+    // Encrypt the private key using AWS KMS
+    const encryptedPrivateKey = await kms.encrypt({
+      KeyId: KEY_REF,
+      Plaintext: privKeyBytes
+    }).promise()
+
+    // Encrypt the public key using AWS KMS
+    const encryptedPublicKey = await kms.encrypt({
+      KeyId: KEY_REF,
+      Plaintext: publicKey
+    }).promise()
+
+        // Check if encryption was successful
+        if (!encryptedPrivateKey.CiphertextBlob || !encryptedPublicKey.CiphertextBlob) {
+          throw new Error("Encryption failed")
+        }
+    
+
+    // Sign the message
+    const signedMessage = signMessage(message)
+
+    return c.json({
+      success: true,
+      signedMessage,
+      encryptedPrivateKey: encryptedPrivateKey.CiphertextBlob.toString('base64'),
+      encryptedPublicKey: encryptedPublicKey.CiphertextBlob.toString('base64')
+    })
+  } catch (error: unknown) {
+    let errorMessage = 'An unknown error occurred'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    return c.json({ success: false, message: errorMessage }, 500)
+  }
+})
+
 
 /**
  * Verify a signed message using the public key.
@@ -71,7 +129,6 @@ export function verifyMessage(
   const pub = Buffer.from(pubKey, "hex")
   return ed25519.verify(sig, msg, pub)
 }
-
 
 
 const listenClient = new Client({

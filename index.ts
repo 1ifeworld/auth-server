@@ -15,6 +15,8 @@ const MESSAGE = JSON.stringify({ userId: "1", channelId: "9" })
 const listenConnectionString = process.env.LISTEN_DATABASE_URL
 const writeConnectionString = process.env.WRITE_DATABASE_URL
 
+
+
 const KEY_REF = process.env.KEY_REF
 
 if (!KEY_REF) {
@@ -23,8 +25,7 @@ if (!KEY_REF) {
 
 const kms = new AWS.KMS()
 
-
-
+AWS.config.update({ region: 'us-east-2' });
 
 const USER_ID_1_PRIV_KEY = process.env.USER_ID_1_PRIV_KEY
 if (!USER_ID_1_PRIV_KEY) {

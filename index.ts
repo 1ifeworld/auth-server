@@ -325,6 +325,8 @@ app.post("/signWithDecryptedKeys", async (c) => {
     const encryptedPrivateKeyBuffer = Buffer.from(encryptedPrivateKey, 'base64')
     console.log(typeof encryptedPrivateKeyBuffer)
     const encryptedPublicKeyBuffer = Buffer.from(encryptedPublicKey, 'base64')
+
+    console.log("post bufferize")
     
 
     // Decrypt the private key using AWS KMS

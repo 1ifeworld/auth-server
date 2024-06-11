@@ -23,9 +23,11 @@ if (!KEY_REF) {
   throw new Error("KEY_REF environment variable is not defined")
 }
 
-AWS.config.update({ region: 'us-east-1' })
-AWS.config.update({ accessKeyId: process.env.ACCESS})
-AWS.config.update({ secretAccessKey: process.env.SECRET })
+AWS.config.update({
+  region: process.env.AWS_REGION || 'us-east-1',
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+})
 
 const kms = new AWS.KMS()
 

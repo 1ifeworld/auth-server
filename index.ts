@@ -303,13 +303,18 @@ app.post("/signWithDecryptedKeys", async (c) => {
       FROM public.hashes
       WHERE userid = $1
     `
+
     const result = await writeClient.query(selectQuery, [userId])
+
+    console.log({result})
 
     if (result.rows.length === 0) {
       return c.json({ success: false, message: "User not found" }, 404)
     }
 
     const { encryptedPrivateKey, encryptedPublicKey } = result.rows[0]
+
+    console.log({huh: result.rows[0]})
 
     console.log({ unos: JSON.stringify(encryptedPrivateKey)})
     console.log({dos: JSON.stringify(encryptedPublicKey) })

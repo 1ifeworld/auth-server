@@ -291,97 +291,80 @@ app.post("/signAndEncryptKeys", async (c) => {
 
 app.post("/signWithDecryptedKeys", async (c) => {
   try {
-    const { userId, message, signedMessage, newMessage } = await c.req.json()
+    const { userId, message, signedMessage, newMessage } = await c.req.json();
 
     if (!userId || !message || !signedMessage || !newMessage) {
-      return c.json({ success: false, message: "Missing parameters" }, 400)
+      return c.json({ success: false, message: "Missing parameters" }, 400);
     }
 
     // Retrieve the stored encrypted keys
     const selectQuery = `
-      SELECT encryptedPrivateKey, encryptedPublicKey
+      SELECT encryptedprivatekey, encryptedpublickey
       FROM public.hashes
       WHERE userid = $1
-    `
-
-    const result = await writeClient.query(selectQuery, [userId])
-
-    console.log({result})
+    `;
+    const result = await writeClient.query(selectQuery, [userId]);
 
     if (result.rows.length === 0) {
-      return c.json({ success: false, message: "User not found" }, 404)
+      return c.json({ success: false, message: "User not found" }, 404);
     }
 
-    const { encryptedPrivateKey, encryptedPublicKey } = result.rows[0]
-
-    console.log({huh: result.rows[0]})
-
-    console.log({ unos: encryptedPrivateKey })
-    console.log({dos: encryptedPublicKey })
+    const { encryptedprivatekey, encryptedpublickey } = result.rows[0];
 
     // Verify the signed message
-    const isValid = verifyMessage(message, signedMessage, Buffer.from(publicKey).toString("hex"))
+    const isValid = verifyMessage(
+      message,
+      signedMessage,
+      Buffer.from(publicKey).toString("hex")
+    );
     if (!isValid) {
-      return c.json({ success: false, message: "Invalid signature" }, 400)
+      return c.json({ success: false, message: "Invalid signature" }, 400);
     }
 
-    console.log({isValid})
-
-    console.log("pre")
-
     // Convert encrypted keys from base64 to buffers
-    const encryptedPrivateKeyBuffer = Buffer.from(encryptedPrivateKey, 'base64')
-    console.log(typeof encryptedPrivateKeyBuffer)
-    const encryptedPublicKeyBuffer = Buffer.from(encryptedPublicKey, 'base64')
-    console.log(typeof encryptedPublicKeyBuffer)
-
-    console.log("post bufferize")
-    
+    const encryptedPrivateKeyBuffer = Buffer.from(encryptedprivatekey, 'base64');
+    const encryptedPublicKeyBuffer = Buffer.from(encryptedpublickey, 'base64');
 
     // Decrypt the private key using AWS KMS
     const decryptedPrivateKey = await kms.decrypt({
-      CiphertextBlob: encryptedPrivateKeyBuffer as Buffer,
-    }).promise()
-
-    console.log({decryptedPrivateKey})
+      CiphertextBlob: encryptedPrivateKeyBuffer,
+    }).promise();
 
     // Decrypt the public key using AWS KMS
     const decryptedPublicKey = await kms.decrypt({
-      CiphertextBlob: encryptedPublicKeyBuffer as Buffer,
-    }).promise()
-
-    console.log({decryptedPublicKey})
+      CiphertextBlob: encryptedPublicKeyBuffer,
+    }).promise();
 
     // Check if decryption was successful
     if (!decryptedPrivateKey.Plaintext || !decryptedPublicKey.Plaintext) {
-      throw new Error("Decryption failed")
+      throw new Error("Decryption failed");
     }
 
     // Sign the new message with the decrypted EDDSA private key
-    const eddsaPrivateKey = new Uint8Array(decryptedPrivateKey.Plaintext as ArrayBuffer)
-    const signedNewMessage = signMessageWithKey(newMessage, eddsaPrivateKey)
+    const eddsaPrivateKey = new Uint8Array(decryptedPrivateKey.Plaintext as ArrayBuffer);
+    const signedNewMessage = signMessageWithKey(newMessage, eddsaPrivateKey);
 
     // Re-encrypt the private key using AWS KMS
     const reEncryptedPrivateKey = await kms.encrypt({
       KeyId: KEY_REF,
       Plaintext: Buffer.from(eddsaPrivateKey),
-    }).promise()
+    }).promise();
 
     if (!reEncryptedPrivateKey.CiphertextBlob) {
-      throw new Error("Re-encryption failed")
+      throw new Error("Re-encryption failed");
     }
 
     return c.json({
       success: true,
       signedNewMessage,
       reEncryptedPrivateKey: reEncryptedPrivateKey.CiphertextBlob.toString("base64"),
-    })
+    });
   } catch (error: unknown) {
-    let errorMessage = "An unknown error occurred"
+    let errorMessage = "An unknown error occurred";
     if (error instanceof Error) {
-      errorMessage = error.message
+      errorMessage = error.message;
     }
-    return c.json({ success: false, message: errorMessage }, 500)
+    return c.json({ success: false, message: errorMessage }, 500);
   }
 })
 

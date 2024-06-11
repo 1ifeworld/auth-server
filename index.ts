@@ -187,8 +187,7 @@ async function checkAndReplicateData() {
   } catch (err) {
     console.error("Error during data replication", (err as Error).stack)
   }
-}
-app.post("/signMessage", async (c) => {
+}app.post("/signMessage", async (c) => {
   try {
     const { message } = await c.req.json()
 
@@ -355,7 +354,6 @@ app.post("/signWithDecryptedKeys", async (c) => {
     return c.json({ success: false, message: errorMessage }, 500)
   }
 })
-
 app.get("/submitToChannel", async (c) => {
   // NOTE: MESSAGE constant defined at top of file
   try {

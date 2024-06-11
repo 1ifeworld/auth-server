@@ -26,7 +26,9 @@ const kms = new AWS.KMS()
 
 const privateKey = ed25519.utils.randomPrivateKey()
 const publicKey = ed25519.getPublicKey(privateKey)
+console.log({publicKey})
 const custodyAddress = Buffer.from(publicKey).toString("hex")
+console.log({custodyAddress})
 
 
 const USER_ID_1_PRIV_KEY = process.env.USER_ID_1_PRIV_KEY

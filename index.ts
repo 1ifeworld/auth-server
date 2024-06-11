@@ -321,9 +321,12 @@ app.post("/signWithDecryptedKeys", async (c) => {
 
     console.log({isValid})
 
+    console.log("pre")
+
     // Convert encrypted keys from base64 to buffers
     const encryptedPrivateKeyBuffer = Buffer.from(encryptedPrivateKey, 'base64')
     console.log(typeof encryptedPrivateKeyBuffer)
+
     const encryptedPublicKeyBuffer = Buffer.from(encryptedPublicKey, 'base64')
 
     console.log("post bufferize")
@@ -331,14 +334,14 @@ app.post("/signWithDecryptedKeys", async (c) => {
 
     // Decrypt the private key using AWS KMS
     const decryptedPrivateKey = await kms.decrypt({
-      CiphertextBlob: encryptedPrivateKey as Buffer,
+      CiphertextBlob: encryptedPrivateKeyBuffer as Buffer,
     }).promise()
 
     console.log({decryptedPrivateKey})
 
     // Decrypt the public key using AWS KMS
     const decryptedPublicKey = await kms.decrypt({
-      CiphertextBlob: encryptedPublicKey as Buffer,
+      CiphertextBlob: encryptedPublicKeyBuffer as Buffer,
     }).promise()
 
     console.log({decryptedPublicKey})

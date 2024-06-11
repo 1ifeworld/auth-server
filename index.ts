@@ -288,6 +288,7 @@ app.post("/signAndEncryptKeys", async (c) => {
     return c.json({ success: false, message: errorMessage }, 500)
   }
 })
+
 app.post("/signWithDecryptedKeys", async (c) => {
   try {
     const { userId, message, signedMessage, newMessage } = await c.req.json()

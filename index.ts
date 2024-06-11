@@ -325,16 +325,21 @@ app.post("/signWithDecryptedKeys", async (c) => {
     const encryptedPrivateKeyBuffer = Buffer.from(encryptedPrivateKey, 'base64')
     console.log(typeof encryptedPrivateKeyBuffer)
     const encryptedPublicKeyBuffer = Buffer.from(encryptedPublicKey, 'base64')
+    
 
     // Decrypt the private key using AWS KMS
     const decryptedPrivateKey = await kms.decrypt({
-      CiphertextBlob: encryptedPrivateKeyBuffer,
+      CiphertextBlob: encryptedPrivateKey,
     }).promise()
+
+    console.log({decryptedPrivateKey})
 
     // Decrypt the public key using AWS KMS
     const decryptedPublicKey = await kms.decrypt({
       CiphertextBlob: encryptedPublicKeyBuffer,
     }).promise()
+
+    console.log({decryptedPublicKey})
 
     // Check if decryption was successful
     if (!decryptedPrivateKey.Plaintext || !decryptedPublicKey.Plaintext) {

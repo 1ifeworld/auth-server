@@ -24,6 +24,9 @@ if (!KEY_REF) {
 }
 
 AWS.config.update({ region: 'us-east-1' })
+AWS.config.update({ accessKeyId: process.env.ACCESS})
+AWS.config.update({ secretAccessKey: process.env.SECRET })
+
 const kms = new AWS.KMS()
 
 

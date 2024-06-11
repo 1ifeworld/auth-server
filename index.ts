@@ -26,6 +26,8 @@ const kms = new AWS.KMS()
 
 const privateKey = ed25519.utils.randomPrivateKey()
 const publicKey = ed25519.getPublicKey(privateKey)
+const custodyAddress = Buffer.from(publicKey).toString("hex")
+
 
 const USER_ID_1_PRIV_KEY = process.env.USER_ID_1_PRIV_KEY
 if (!USER_ID_1_PRIV_KEY) {
@@ -186,7 +188,6 @@ async function checkAndReplicateData() {
     console.error("Error during data replication", (err as Error).stack)
   }
 }
-
 app.post("/signMessage", async (c) => {
   try {
     const { message } = await c.req.json()
@@ -213,9 +214,9 @@ app.post("/signMessage", async (c) => {
 
 app.post("/signAndEncryptKeys", async (c) => {
   try {
-    const { message, signedMessage, custodyAddress } = await c.req.json()
+    const { message, signedMessage } = await c.req.json()
 
-    if (!message || !signedMessage || !custodyAddress) {
+    if (!message || !signedMessage) {
       return c.json({ success: false, message: "Missing parameters" }, 400)
     }
 

@@ -311,11 +311,15 @@ app.post("/signWithDecryptedKeys", async (c) => {
 
     const { encryptedPrivateKey, encryptedPublicKey } = result.rows[0]
 
+    console.log({ result: result.rows[0]})
+
     // Verify the signed message
     const isValid = verifyMessage(message, signedMessage, Buffer.from(publicKey).toString("hex"))
     if (!isValid) {
       return c.json({ success: false, message: "Invalid signature" }, 400)
     }
+
+    console.log({isValid})
 
     // Convert encrypted keys from base64 to buffers
     const encryptedPrivateKeyBuffer = Buffer.from(encryptedPrivateKey, 'base64')

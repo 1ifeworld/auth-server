@@ -311,8 +311,8 @@ app.post("/signWithDecryptedKeys", async (c) => {
 
     const { encryptedPrivateKey, encryptedPublicKey } = result.rows[0]
 
-    console.log({ result: encryptedPrivateKey})
-    console.log({result:encryptedPublicKey })
+    console.log({ unos: JSON.stringify(encryptedPrivateKey)})
+    console.log({dos: JSON.stringify(encryptedPublicKey) })
 
     // Verify the signed message
     const isValid = verifyMessage(message, signedMessage, Buffer.from(publicKey).toString("hex"))

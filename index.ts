@@ -24,11 +24,6 @@ if (!KEY_REF) {
 const kms = new AWS.KMS()
 
 
-const privateKey = ed25519.utils.randomPrivateKey()
-const publicKey = ed25519.getPublicKey(privateKey)
-console.log({publicKey})
-const custodyAddress = Buffer.from(publicKey).toString("hex")
-console.log({custodyAddress})
 
 
 const USER_ID_1_PRIV_KEY = process.env.USER_ID_1_PRIV_KEY
@@ -40,6 +35,12 @@ if (!USER_ID_1_PRIV_KEY) {
 const privKeyBytes = new Uint8Array(Buffer.from(USER_ID_1_PRIV_KEY, "hex"))
 const USER_ID_1_PUB_KEY = ed25519.getPublicKey(USER_ID_1_PRIV_KEY)
 // const pubKeyBytes = new Uint8Array(Buffer.from(USER_ID_1_PUB_KEY, "hex"))
+
+
+const publicKey = ed25519.getPublicKey(privKeyBytes)
+console.log({publicKey})
+const custodyAddress = Buffer.from(publicKey).toString("hex")
+console.log({custodyAddress})
 
 const USER_ID = 1
 const CHANNEL_ID = 9

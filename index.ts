@@ -27,7 +27,7 @@ const kms = new AWS.KMS()
 const privateKey = ed25519.utils.randomPrivateKey()
 const publicKey = ed25519.getPublicKey(privateKey)
 
-const USER_ID_1_PRIV_KEY = process.env.USER_1_PRIVATE_KEY
+const USER_ID_1_PRIV_KEY = process.env.USER_ID_1_PRIV_KEY
 if (!USER_ID_1_PRIV_KEY) {
   throw new Error("USER_1_PRIVATE_KEY environment variable is not defined")
 }

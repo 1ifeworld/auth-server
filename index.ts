@@ -299,9 +299,9 @@ app.post("/signWithDecryptedKeys", async (c) => {
 
     // Retrieve the stored encrypted keys
     const selectQuery = `
-      SELECT custodyAddress, encryptedPrivateKey, encryptedPublicKey
+      SELECT encryptedPrivateKey, encryptedPublicKey
       FROM public.hashes
-      WHERE userId = $1
+      WHERE userid = $1
     `
     const result = await writeClient.query(selectQuery, [userId])
 
@@ -309,7 +309,7 @@ app.post("/signWithDecryptedKeys", async (c) => {
       return c.json({ success: false, message: "User not found" }, 404)
     }
 
-    const { custodyAddress, encryptedPrivateKey, encryptedPublicKey } = result.rows[0]
+    const { encryptedPrivateKey, encryptedPublicKey } = result.rows[0]
 
     // Verify the signed message
     const isValid = verifyMessage(message, signedMessage, Buffer.from(publicKey).toString("hex"))
@@ -319,6 +319,7 @@ app.post("/signWithDecryptedKeys", async (c) => {
 
     // Convert encrypted keys from base64 to buffers
     const encryptedPrivateKeyBuffer = Buffer.from(encryptedPrivateKey, 'base64')
+    console.log(typeof encryptedPrivateKeyBuffer)
     const encryptedPublicKeyBuffer = Buffer.from(encryptedPublicKey, 'base64')
 
     // Decrypt the private key using AWS KMS

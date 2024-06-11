@@ -311,7 +311,8 @@ app.post("/signWithDecryptedKeys", async (c) => {
 
     const { encryptedPrivateKey, encryptedPublicKey } = result.rows[0]
 
-    console.log({ result: result.rows[0]})
+    console.log({ result: encryptedPrivateKey})
+    console.log({result:encryptedPublicKey })
 
     // Verify the signed message
     const isValid = verifyMessage(message, signedMessage, Buffer.from(publicKey).toString("hex"))
@@ -326,8 +327,8 @@ app.post("/signWithDecryptedKeys", async (c) => {
     // Convert encrypted keys from base64 to buffers
     const encryptedPrivateKeyBuffer = Buffer.from(encryptedPrivateKey, 'base64')
     console.log(typeof encryptedPrivateKeyBuffer)
-
     const encryptedPublicKeyBuffer = Buffer.from(encryptedPublicKey, 'base64')
+    console.log(typeof encryptedPublicKeyBuffer)
 
     console.log("post bufferize")
     

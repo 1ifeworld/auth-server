@@ -288,7 +288,6 @@ app.post("/signAndEncryptKeys", async (c) => {
     return c.json({ success: false, message: errorMessage }, 500)
   }
 })
-
 app.post("/signWithDecryptedKeys", async (c) => {
   try {
     const { userId, message, signedMessage, newMessage } = await c.req.json()
@@ -317,19 +316,19 @@ app.post("/signWithDecryptedKeys", async (c) => {
       return c.json({ success: false, message: "Invalid signature" }, 400)
     }
 
+    // Convert encrypted keys from base64 to buffers
+    const encryptedPrivateKeyBuffer = Buffer.from(encryptedPrivateKey, 'base64')
+    const encryptedPublicKeyBuffer = Buffer.from(encryptedPublicKey, 'base64')
+
     // Decrypt the private key using AWS KMS
-    const decryptedPrivateKey = await kms
-      .decrypt({
-        CiphertextBlob: encryptedPrivateKey,
-      })
-      .promise()
+    const decryptedPrivateKey = await kms.decrypt({
+      CiphertextBlob: encryptedPrivateKeyBuffer,
+    }).promise()
 
     // Decrypt the public key using AWS KMS
-    const decryptedPublicKey = await kms
-      .decrypt({
-        CiphertextBlob: encryptedPublicKey,
-      })
-      .promise()
+    const decryptedPublicKey = await kms.decrypt({
+      CiphertextBlob: encryptedPublicKeyBuffer,
+    }).promise()
 
     // Check if decryption was successful
     if (!decryptedPrivateKey.Plaintext || !decryptedPublicKey.Plaintext) {
@@ -341,12 +340,10 @@ app.post("/signWithDecryptedKeys", async (c) => {
     const signedNewMessage = signMessageWithKey(newMessage, eddsaPrivateKey)
 
     // Re-encrypt the private key using AWS KMS
-    const reEncryptedPrivateKey = await kms
-      .encrypt({
-        KeyId: KEY_REF,
-        Plaintext: Buffer.from(eddsaPrivateKey),
-      })
-      .promise()
+    const reEncryptedPrivateKey = await kms.encrypt({
+      KeyId: KEY_REF,
+      Plaintext: Buffer.from(eddsaPrivateKey),
+    }).promise()
 
     if (!reEncryptedPrivateKey.CiphertextBlob) {
       throw new Error("Re-encryption failed")
@@ -365,6 +362,7 @@ app.post("/signWithDecryptedKeys", async (c) => {
     return c.json({ success: false, message: errorMessage }, 500)
   }
 })
+
 app.get("/submitToChannel", async (c) => {
   // NOTE: MESSAGE constant defined at top of file
   try {

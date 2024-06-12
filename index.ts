@@ -172,7 +172,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
 
       const updateSessionQuery = `
         UPDATE public.sessions
-        SET session = $1, expiresAt = $2, deviceId = $3
+        SET id = $1, expiresAt = $2, deviceId = $3
         WHERE userId = $4
         RETURNING id
       `

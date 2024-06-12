@@ -11,35 +11,35 @@ import { writeClient } from "./watcher"
 import { signMessage, signMessageWithKey, verifyMessage } from "./signatures"
 import { KEY_REF, publicKey } from "./keys"
 
-verifyRequestOrigin(origin, ["https://www.river.ph/*"])
+// verifyRequestOrigin(origin, ["https://www.river.ph/*"])
 
-// cross site request forgery helper 
-app.use(csrf())
+// // cross site request forgery helper 
+// app.use(csrf())
 
 const MESSAGE = 'NADA' // placeholder message
 
-app.use("*", async (c, next) => {
-  const sessionId = getCookie(c, lucia.sessionCookieName) ?? null
-  if (!sessionId) {
-    c.set("user", null)
-    c.set("session", null)
-    return next()
-  }
-  const { session, user } = await lucia.validateSession(sessionId)
-  if (session && session.fresh) {
-    c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
-      append: true,
-    })
-  }
-  if (!session) {
-    c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
-      append: true,
-    })
-  }
-  c.set("user", user)
-  c.set("session", session)
-  return next()
-})
+// app.use("*", async (c, next) => {
+//   const sessionId = getCookie(c, lucia.sessionCookieName) ?? null
+//   if (!sessionId) {
+//     c.set("user", null)
+//     c.set("session", null)
+//     return next()
+//   }
+//   const { session, user } = await lucia.validateSession(sessionId)
+//   if (session && session.fresh) {
+//     c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
+//       append: true,
+//     })
+//   }
+//   if (!session) {
+//     c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
+//       append: true,
+//     })
+//   }
+//   c.set("user", user)
+//   c.set("session", session)
+//   return next()
+// })
 
 app.get("/", async (c) => {
   const user = c.get("user")

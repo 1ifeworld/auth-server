@@ -134,22 +134,23 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         throw new Error("Encryption failed")
       }
 
-      const insertUserQuery = `
-        INSERT INTO public.users (recovery, "to", log_addr, block_num)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id
-      `
-      const newUserResult = await writeClient.query(insertUserQuery, [
-        publicKeyHex,
-        null,
-        null,
-        0,
-      ])
+      // const insertUserQuery = `
+      //   INSERT INTO public.users (recovery, "to", log_addr, block_num)
+      //   VALUES ($1, $2, $3, $4)
+      //   RETURNING userid
+      // `
 
-      console.log({newUserResult})
+      // const newUserResult = await writeClient.query(insertUserQuery, [
+      //   publicKeyHex,
+      //   null,
+      //   null,
+      //   0,
+      // ])
 
-      // this is not real lol 
-      userId = newUserResult.rows[0].id
+      // console.log({newUserResult})
+
+      // // this is not real lol 
+      // userId = newUserResult.rows[0].id
 
       const insertSessionQuery = `
         INSERT INTO public.sessions (userid, session, expiresAt, deviceid)

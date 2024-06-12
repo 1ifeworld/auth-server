@@ -84,6 +84,7 @@ app.post("/signMessage", async (c) => {
 })
 
 app.post("/generateEncryptKeysAndSessionId", async (c) => {
+  console.log("IN ENCRYPT ROUTE")
   try {
     const { message, signedMessage, deviceId } = await c.req.json()
 
@@ -97,6 +98,8 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
       return c.json({ success: false, message: "Invalid signature" }, 400)
     }
 
+    console.log({isValid})
+
     const publicKeyHex = Buffer.from(publicKey).toString("hex")
 
     // Check if a custody address exists in the hashes table
@@ -106,10 +109,13 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
     `
     const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
 
+    console.log({hashResult})
+
     let userId
     let sessionId
 
     if (hashResult.rows.length === 0) {
+      console.log("first time user!")
       // First-time user - generate keys, encrypt, and store them
       const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
       const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
@@ -139,6 +145,10 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         null,
         0,
       ])
+
+      console.log({newUserResult})
+
+      // this is not real lol 
       userId = newUserResult.rows[0].id
 
       const insertSessionQuery = `

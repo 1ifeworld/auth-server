@@ -2,72 +2,64 @@ import { Lucia, TimeSpan, type DatabaseSessionAttributes } from 'lucia'
 import { adapter } from './db'
 
 export const lucia = new Lucia(adapter, {
-    sessionExpiresIn: new TimeSpan(2, "w")
+  sessionExpiresIn: new TimeSpan(2, "w")
 })
 
 declare module 'lucia' {
-    interface Register {
-        Lucia: typeof lucia
-        DatabaseSessionAttributes: DatabaseSessionAttributes
-    }
-    interface DatabaseSessionAttributes {
-        userid: string
-        expiresAt: Date
-    }
+  interface Register {
+    Lucia: typeof lucia
+    DatabaseSessionAttributes: DatabaseSessionAttributes
+  }
+  interface DatabaseSessionAttributes {
+    userid: string
+    expiresAt: Date
+    deviceId: string
+  }
 }
 
 export interface SessionAttributes extends DatabaseSessionAttributes {
-    created?: Date
-    session?: string
+  created?: Date
+  session?: string
 }
 
-// placeholder 
-const userId = 'exampleUserId' 
+// Placeholder userId
+const userId = 'exampleUserId'
+const deviceId = 'exampleDeviceId' // Placeholder deviceId
 
 export const attributes: SessionAttributes = {
-    userid: userId,
-    expiresAt: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
-    created: new Date(),
-    session: 'exampleSessionData' 
+  userid: userId,
+  expiresAt: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
+  created: new Date(),
+  session: 'exampleSessionData',
+  deviceId: deviceId,
 }
 
-
-
 /* 
-to create sessions FROM DOCS:
+To create sessions FROM DOCS:
 
-const session = await lucia.createSession(userId, {})
+const session = await lucia.createSession(userId, { deviceId: 'device123' })
 
 If you have database attributes defined, pass their values as the second argument.
 
 const session = await lucia.createSession(userId, {
-	country: "us"
+  country: "us",
+  deviceId: 'device123'
 })
 
-declare module "lucia" {
-	interface Register {
-		Lucia: typeof lucia
-		DatabaseSessionAttributes: DatabaseSessionAttributes
-	}
-}
-
-interface DatabaseSessionAttributes {
-	country: string
-}
-
-TO VALIDATE SESSIONS: 
+To validate sessions:
 
 const { session, user } = await lucia.validateSession(sessionId)
 
 const { session } = await lucia.validateSession(sessionId)
 if (session && session.fresh) {
-	// set session cookie
+  // set session cookie
 }
 
 const sessionId = lucia.readSessionCookie("auth_session=abc")
 const sessionId = lucia.readBearerToken("Bearer abc")
 
-CREATE COOKIES
+Create cookies:
+
 const sessionCookie = lucia.createSessionCookie(session.id)
 
 // set cookie directly
@@ -75,31 +67,31 @@ headers.set("Set-Cookie", sessionCookie.serialize())
 // use your framework's cookie utility
 setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes)
 
-DELETE COOKIES: 
+Delete cookies:
 
 const sessionCookie = lucia.createBlankSessionCookie()
 
 headers.set("Set-Cookie", sessionCookie.serialize())
 setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes)
 
-INVALIDATE SESSIONS FOR SINGLE USER: 
+Invalidate sessions for single user:
 
 await lucia.invalidateSession(sessionId)
 
-INVALIDATE ALL SESSIONS: 
+Invalidate all sessions:
 
 await lucia.invalidateUserSessions(userId)
 
-GET ALL SESSIONS FROM A SINGLE USER: 
+Get all sessions from a single user:
 
 const sessions = await lucia.getUserSessions(userId)
 
-DELETE ALL EXPIRED SESSIONS: 
+Delete all expired sessions:
 
 await lucia.deleteExpiredSessions()
 
-SESSION COOKIESSSSS 
+Session cookies guide: 
 
 https://lucia-auth.com/guides/validate-session-cookies/
-
 */
+

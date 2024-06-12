@@ -19,28 +19,28 @@ app.use(csrf())
 const MESSAGE = 'NADA' // placeholder message
 
 app.use("*", async (c, next) => {
-	const sessionId = getCookie(c, lucia.sessionCookieName) ?? null
-	if (!sessionId) {
-		c.set("user", null)
-		c.set("session", null)
-		return next()
-	}
-	const { session, user } = await lucia.validateSession(sessionId)
-	if (session && session.fresh) {
-		// use `header()` instead of `setCookie()` to avoid TS errors
-		c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
-			append: true
-		})
-	}
-	if (!session) {
-		c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
-			append: true
-		})
-	}
-	c.set("user", user)
-	c.set("session", session)
-	return next()
+  const sessionId = getCookie(c, lucia.sessionCookieName) ?? null
+  if (!sessionId) {
+    c.set("user", null)
+    c.set("session", null)
+    return next()
+  }
+  const { session, user } = await lucia.validateSession(sessionId)
+  if (session && session.fresh) {
+    c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
+      append: true,
+    })
+  }
+  if (!session) {
+    c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
+      append: true,
+    })
+  }
+  c.set("user", user)
+  c.set("session", session)
+  return next()
 })
+
 
 app.get("/", async (c) => {
 	const user = c.get("user")
@@ -87,65 +87,111 @@ app.post("/signMessage", async (c) => {
   }
 })
 
-app.post("/signAndEncryptKeys", async (c) => {
-  try {
-    const { message, signedMessage } = await c.req.json()
 
-    if (!message || !signedMessage) {
+app.post("/generateEncryptKeysAndSessionId", async (c) => {
+  try {
+    const { message, signedMessage, deviceId } = await c.req.json()
+
+    if (!message || !signedMessage || !deviceId) {
       return c.json({ success: false, message: "Missing parameters" }, 400)
     }
 
     // Verify the signed message
     const isValid = verifyMessage(message, signedMessage, Buffer.from(publicKey).toString("hex"))
-    console.log(Buffer.from(publicKey).toString("hex"))
-    console.log(isValid)
     if (!isValid) {
       return c.json({ success: false, message: "Invalid signature" }, 400)
     }
 
-    // Generate EDDSA key pair
-    const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
-    const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
+    // Check if the user exists
+    const selectUserQuery = `
+      SELECT id FROM public.users
+      WHERE recovery = $1
+    `
+    const userResult = await writeClient.query(selectUserQuery, [Buffer.from(publicKey).toString("hex")])
 
-    // Encrypt the EDDSA private key using AWS KMS
-    const encryptedPrivateKey = await kms
-      .encrypt({
+    let userId
+    let sessionId
+
+    if (userResult.rows.length === 0) {
+      // First-time user - generate keys, encrypt, and store them
+      const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
+      const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
+
+      const encryptedPrivateKey = await kms.encrypt({
         KeyId: KEY_REF,
         Plaintext: Buffer.from(eddsaPrivateKey),
-      })
-      .promise()
+      }).promise()
 
-    // Encrypt the EDDSA public key using AWS KMS
-    const encryptedPublicKey = await kms
-      .encrypt({
+      const encryptedPublicKey = await kms.encrypt({
         KeyId: KEY_REF,
         Plaintext: Buffer.from(eddsaPublicKey),
-      })
-      .promise()
+      }).promise()
 
-    // Check if encryption was successful
-    if (!encryptedPrivateKey.CiphertextBlob || !encryptedPublicKey.CiphertextBlob) {
-      throw new Error("Encryption failed")
+      if (!encryptedPrivateKey.CiphertextBlob || !encryptedPublicKey.CiphertextBlob) {
+        throw new Error("Encryption failed")
+      }
+
+      const insertUserQuery = `
+        INSERT INTO public.users (recovery, "to", log_addr, block_num)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id
+      `
+      const newUserResult = await writeClient.query(insertUserQuery, [
+        Buffer.from(publicKey).toString("hex"),
+        null,
+        null,
+        0,
+      ])
+      userId = newUserResult.rows[0].id
+
+      const insertSessionQuery = `
+        INSERT INTO public.sessions (userId, session, expiresAt, deviceId)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id
+      `
+      const newSessionResult = await writeClient.query(insertSessionQuery, [
+        userId,
+        "sessionData",
+        new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000), // 2 weeks from now
+        deviceId,
+      ])
+      sessionId = newSessionResult.rows[0].id
+
+      // Store the encrypted keys
+      const insertKeysQuery = `
+        INSERT INTO public.hashes (userId, custodyAddress, deviceId, encryptedprivatekey, encryptedpublickey)
+        VALUES ($1, $2, $3, $4, $5)
+      `
+      await writeClient.query(insertKeysQuery, [
+        userId,
+        Buffer.from(publicKey).toString("hex"),
+        deviceId,
+        encryptedPrivateKey.CiphertextBlob.toString("base64"),
+        encryptedPublicKey.CiphertextBlob.toString("base64"),
+      ])
+    } else {
+      // Returning user - update session ID
+      userId = userResult.rows[0].id
+
+      const updateSessionQuery = `
+        UPDATE public.sessions
+        SET session = $1, expiresAt = $2, deviceId = $3
+        WHERE userId = $4
+        RETURNING id
+      `
+      const updatedSessionResult = await writeClient.query(updateSessionQuery, [
+        "updatedSessionData",
+        new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000), 
+        deviceId,
+        userId,
+      ])
+      sessionId = updatedSessionResult.rows[0].id
     }
-
-    // Store encrypted keys in the database
-    const insertQuery = `
-      INSERT INTO public.hashes (custodyAddress, encryptedPrivateKey, encryptedPublicKey)
-      VALUES ($1, $2, $3)
-      RETURNING userId
-    `
-    const result = await writeClient.query(insertQuery, [
-      custodyAddress,
-      encryptedPrivateKey.CiphertextBlob,
-      encryptedPublicKey.CiphertextBlob,
-    ])
-    const userId = result.rows[0].userid
 
     return c.json({
       success: true,
       userId,
-      encryptedPrivateKey: encryptedPrivateKey.CiphertextBlob.toString("base64"),
-      encryptedPublicKey: encryptedPublicKey.CiphertextBlob.toString("base64"),
+      sessionId,
     })
   } catch (error: unknown) {
     let errorMessage = "An unknown error occurred"
@@ -156,75 +202,58 @@ app.post("/signAndEncryptKeys", async (c) => {
   }
 })
 
-app.post("/signWithDecryptedKeys", async (c) => {
-  try {
-    const { userId, message, signedMessage, newMessage } = await c.req.json()
 
-    if (!userId || !message || !signedMessage || !newMessage) {
+app.post("/signMessageWithSession", async (c) => {
+  try {
+    const { sessionId, message } = await c.req.json()
+
+    if (!sessionId || !message) {
       return c.json({ success: false, message: "Missing parameters" }, 400)
     }
 
-    // Retrieve the stored encrypted keys
-    const selectQuery = `
-      SELECT encryptedprivatekey, encryptedpublickey
-      FROM public.hashes
-      WHERE userid = $1
+    // Retrieve the session and associated user
+    const selectSessionQuery = `
+      SELECT s.userId, u.recovery FROM public.sessions s
+      JOIN public.users u ON s.userId = u.id
+      WHERE s.id = $1
     `
-    const result = await writeClient.query(selectQuery, [userId])
+    const sessionResult = await writeClient.query(selectSessionQuery, [sessionId])
 
-    if (result.rows.length === 0) {
-      return c.json({ success: false, message: "User not found" }, 404)
+    if (sessionResult.rows.length === 0) {
+      return c.json({ success: false, message: "Invalid session" }, 404)
     }
 
-    const { encryptedprivatekey, encryptedpublickey } = result.rows[0]
+    const { userId, recovery } = sessionResult.rows[0]
 
-    // Verify the signed message
-    const isValid = verifyMessage(
-      message,
-      signedMessage,
-      Buffer.from(publicKey).toString("hex")
-    )
-    if (!isValid) {
-      return c.json({ success: false, message: "Invalid signature" }, 400)
+    // Retrieve the stored encrypted keys
+    const selectKeysQuery = `
+      SELECT encryptedprivatekey FROM public.hashes
+      WHERE userId = $1
+    `
+    const keysResult = await writeClient.query(selectKeysQuery, [userId])
+
+    if (keysResult.rows.length === 0) {
+      return c.json({ success: false, message: "Keys not found" }, 404)
     }
 
-    // Convert encrypted keys from base64 to buffers
-    const encryptedPrivateKeyBuffer = Buffer.from(encryptedprivatekey, 'base64')
-    const encryptedPublicKeyBuffer = Buffer.from(encryptedpublickey, 'base64')
+    const { encryptedprivatekey } = keysResult.rows[0]
 
     // Decrypt the private key using AWS KMS
     const decryptedPrivateKey = await kms.decrypt({
-      CiphertextBlob: encryptedPrivateKeyBuffer,
+      CiphertextBlob: Buffer.from(encryptedprivatekey, "base64"),
     }).promise()
 
-    // Decrypt the public key using AWS KMS
-    const decryptedPublicKey = await kms.decrypt({
-      CiphertextBlob: encryptedPublicKeyBuffer,
-    }).promise()
-
-    // Check if decryption was successful
-    if (!decryptedPrivateKey.Plaintext || !decryptedPublicKey.Plaintext) {
+    if (!decryptedPrivateKey.Plaintext) {
       throw new Error("Decryption failed")
     }
 
-    // Sign the new message with the decrypted EDDSA private key
+    // Sign the message with the decrypted EDDSA private key
     const eddsaPrivateKey = new Uint8Array(decryptedPrivateKey.Plaintext as ArrayBuffer)
-    const signedNewMessage = signMessageWithKey(newMessage, eddsaPrivateKey)
-
-    // Re-encrypt the private key using AWS KMS
-    const reEncryptedPrivateKey = await kms.encrypt({
-      KeyId: KEY_REF,
-      Plaintext: Buffer.from(eddsaPrivateKey),
-    }).promise()
-
-    if (!reEncryptedPrivateKey.CiphertextBlob) {
-      throw new Error("Re-encryption failed")
-    }
+    const signedMessage = signMessageWithKey(message, eddsaPrivateKey)
 
     return c.json({
       success: true,
-      signedNewMessage,
-      reEncryptedPrivateKey: reEncryptedPrivateKey.CiphertextBlob.toString("base64"),
+      signedMessage,
     })
   } catch (error: unknown) {
     let errorMessage = "An unknown error occurred"
@@ -234,6 +263,7 @@ app.post("/signWithDecryptedKeys", async (c) => {
     return c.json({ success: false, message: errorMessage }, 500)
   }
 })
+
 
 app.get("/submitToChannel", async (c) => {
   try {
@@ -287,8 +317,12 @@ app.get("/submitToChannel", async (c) => {
   }
 })
 
-app.get("/", (c) => c.text("Hello, Hono!"))
-
+app.get("/", async (c) => {
+  const user = c.get("user")
+  if (!user) {
+    return c.body(null, 401)
+  }
+})
 
 Bun.serve({
   fetch: app.fetch,

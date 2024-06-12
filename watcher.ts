@@ -1,7 +1,6 @@
 import pg from "pg"
 import { app } from "./hono"
 
-
 const { Client } = pg
 
 const listenConnectionString = process.env.LISTEN_DATABASE_URL
@@ -26,28 +25,54 @@ writeClient
   .connect()
   .then(() => {
     console.log("Connected to Destination DB successfully")
-    ensureTableExists()
+    ensureTablesExist()
   })
   .catch((err) =>
     console.error("Connection error with Destination DB:", (err as Error).stack)
   )
 
-async function ensureTableExists() {
+async function ensureTablesExist() {
   try {
     await writeClient.query("BEGIN")
-    const createTableQuery = `
-        CREATE TABLE IF NOT EXISTS public.users (
-          userid NUMERIC PRIMARY KEY,
-          "to" BYTEA,
-          recovery BYTEA,
-          timestamp INT,
-          log_addr BYTEA,
-          block_num NUMERIC
-        )
-      `
-    await writeClient.query(createTableQuery)
+
+    // Create users table
+    await writeClient.query(`
+      CREATE TABLE IF NOT EXISTS public.users (
+        id SERIAL PRIMARY KEY,
+        "to" TEXT,
+        recovery TEXT,
+        timestamp TIMESTAMP,
+        log_addr TEXT,
+        block_num NUMERIC
+      )
+    `)
+
+    // Create sessions table
+    await writeClient.query(`
+      CREATE TABLE IF NOT EXISTS public.sessions (
+        id TEXT PRIMARY KEY,
+        userId INTEGER NOT NULL REFERENCES public.users(id),
+        session TEXT,
+        created TIMESTAMP,
+        expiresAt TIMESTAMP NOT NULL,
+        deviceId TEXT NOT NULL
+      )
+    `)
+
+    // Create hashes table
+    await writeClient.query(`
+      CREATE TABLE IF NOT EXISTS public.hashes (
+        userId INTEGER NOT NULL REFERENCES public.users(id),
+        custodyAddress TEXT NOT NULL,
+        deviceId TEXT NOT NULL,
+        encryptedpublickey TEXT NOT NULL,
+        encryptedprivatekey TEXT NOT NULL,
+        PRIMARY KEY (userId, custodyAddress, deviceId)
+      )
+    `)
+
     await writeClient.query("COMMIT")
-    console.log("Schema and table verified/created successfully")
+    console.log("Schema and tables verified/created successfully")
   } catch (err) {
     await writeClient.query("ROLLBACK")
     console.error("Error in schema/table creation in destination DB:", (err as Error).stack)
@@ -63,7 +88,7 @@ async function checkAndReplicateData() {
 
     const queryResult = await listenClient.query(
       `
-      SELECT userid, "to", recovery, timestamp, log_addr, block_num FROM users
+      SELECT id, "to", recovery, timestamp, log_addr, block_num FROM users
       WHERE block_num > $1
       ORDER BY block_num ASC
     `,
@@ -73,14 +98,14 @@ async function checkAndReplicateData() {
     if (queryResult.rows.length > 0) {
       const res = await writeClient.query(
         `
-  INSERT INTO public.users (userid, "to", recovery, timestamp, log_addr, block_num)
-  SELECT * FROM unnest($1::NUMERIC[], $2::BYTEA[], $3::BYTEA[], $4::INT[], $5::BYTEA[], $6::NUMERIC[])
-  ON CONFLICT (userid) DO UPDATE
+  INSERT INTO public.users (id, "to", recovery, timestamp, log_addr, block_num)
+  SELECT * FROM unnest($1::NUMERIC[], $2::TEXT[], $3::TEXT[], $4::TIMESTAMP[], $5::TEXT[], $6::NUMERIC[])
+  ON CONFLICT (id) DO UPDATE
   SET "to" = EXCLUDED."to", recovery = EXCLUDED.recovery, timestamp = EXCLUDED.timestamp, log_addr = EXCLUDED.log_addr, block_num = EXCLUDED.block_num
   RETURNING *
 `,
         [
-          queryResult.rows.map((row) => row.userid),
+          queryResult.rows.map((row) => row.id),
           queryResult.rows.map((row) => row.to),
           queryResult.rows.map((row) => row.recovery),
           queryResult.rows.map((row) => row.timestamp),
@@ -107,7 +132,6 @@ process.on("SIGINT", () => {
 })
 
 app.get("/", (c) => c.text("Hello, Hono!"))
-
 
 Bun.serve({
   fetch: app.fetch,

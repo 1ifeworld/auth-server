@@ -19,13 +19,13 @@ import { KEY_REF, publicKey } from "./keys"
 const MESSAGE = 'NADA' // placeholder message
 
 // app.use("*", async (c, next) => {
-//   const sessionId = getCookie(c, lucia.sessionCookieName) ?? null
-//   if (!sessionId) {
+//   const id = getCookie(c, lucia.sessionCookieName) ?? null
+//   if (!id) {
 //     c.set("user", null)
 //     c.set("session", null)
 //     return next()
 //   }
-//   const { session, user } = await lucia.validateSession(sessionId)
+//   const { session, user } = await lucia.validateSession(id)
 //   if (session && session.fresh) {
 //     c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
 //       append: true,
@@ -107,7 +107,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
     const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
 
     let userId
-    let sessionId
+    let id
 
     if (hashResult.rows.length === 0) {
       // First-time user - generate keys, encrypt, and store them
@@ -144,7 +144,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
       const insertSessionQuery = `
         INSERT INTO public.sessions (userId, session, expiresAt, deviceId)
         VALUES ($1, $2, $3, $4)
-        RETURNING sessionid
+        RETURNING id
       `
       const newSessionResult = await writeClient.query(insertSessionQuery, [
         userId,
@@ -152,7 +152,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000), // 2 weeks from now
         deviceId,
       ])
-      sessionId = newSessionResult.rows[0].sessionid
+      id = newSessionResult.rows[0].id
 
       // Store the encrypted keys
       const insertKeysQuery = `
@@ -174,7 +174,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         UPDATE public.sessions
         SET session = $1, expiresAt = $2, deviceId = $3
         WHERE userId = $4
-        RETURNING sessionid
+        RETURNING id
       `
       const updatedSessionResult = await writeClient.query(updateSessionQuery, [
         "updatedSessionData",
@@ -182,13 +182,13 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         deviceId,
         userId,
       ])
-      sessionId = updatedSessionResult.rows[0].sessionid
+      id = updatedSessionResult.rows[0].id
     }
 
     return c.json({
       success: true,
       userId,
-      sessionId,
+      id,
     })
   } catch (error: unknown) {
     let errorMessage = "An unknown error occurred"
@@ -201,9 +201,9 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
 
 app.post("/signMessageWithSession", async (c) => {
   try {
-    const { sessionId, message } = await c.req.json()
+    const { id, message } = await c.req.json()
 
-    if (!sessionId || !message) {
+    if (!id || !message) {
       return c.json({ success: false, message: "Missing parameters" }, 400)
     }
 
@@ -211,9 +211,9 @@ app.post("/signMessageWithSession", async (c) => {
     const selectSessionQuery = `
       SELECT s.userId, u.recovery FROM public.sessions s
       JOIN public.users u ON s.userId = u.id
-      WHERE s.sessionid = $1
+      WHERE s.id = $1
     `
-    const sessionResult = await writeClient.query(selectSessionQuery, [sessionId])
+    const sessionResult = await writeClient.query(selectSessionQuery, [id])
 
     if (sessionResult.rows.length === 0) {
       return c.json({ success: false, message: "Invalid session" }, 404)

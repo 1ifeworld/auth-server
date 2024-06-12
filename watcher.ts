@@ -50,7 +50,7 @@ async function ensureTablesExist() {
     // Create sessions table
     await writeClient.query(`
       CREATE TABLE IF NOT EXISTS public.sessions (
-        sessionid TEXT PRIMARY KEY,
+        id TEXT PRIMARY KEY,
         userid TEXT NOT NULL REFERENCES public.users(userid),
         deviceid TEXT NOT NULL,
         created TIMESTAMP,

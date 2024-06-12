@@ -48,15 +48,15 @@ const session = await lucia.createSession(userId, {
 
 To validate sessions:
 
-const { session, user } = await lucia.validateSession(sessionId)
+const { session, user } = await lucia.validateSession(id)
 
-const { session } = await lucia.validateSession(sessionId)
+const { session } = await lucia.validateSession(id)
 if (session && session.fresh) {
   // set session cookie
 }
 
-const sessionId = lucia.readSessionCookie("auth_session=abc")
-const sessionId = lucia.readBearerToken("Bearer abc")
+const id = lucia.readSessionCookie("auth_session=abc")
+const id = lucia.readBearerToken("Bearer abc")
 
 Create cookies:
 
@@ -76,7 +76,7 @@ setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes)
 
 Invalidate sessions for single user:
 
-await lucia.invalidateSession(sessionId)
+await lucia.invalidateSession(id)
 
 Invalidate all sessions:
 

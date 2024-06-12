@@ -101,13 +101,13 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
 
     // Check if a custody address exists in the hashes table
     const selectHashQuery = `
-      SELECT userId FROM public.hashes
+      SELECT userid FROM public.hashes
       WHERE custodyAddress = $1
     `
     const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
 
     let userId
-    let id
+    let sessionId
 
     if (hashResult.rows.length === 0) {
       // First-time user - generate keys, encrypt, and store them
@@ -142,7 +142,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
       userId = newUserResult.rows[0].id
 
       const insertSessionQuery = `
-        INSERT INTO public.sessions (userId, session, expiresAt, deviceId)
+        INSERT INTO public.sessions (userid, session, expiresAt, deviceid)
         VALUES ($1, $2, $3, $4)
         RETURNING id
       `
@@ -152,11 +152,11 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000), // 2 weeks from now
         deviceId,
       ])
-      id = newSessionResult.rows[0].id
+      sessionId = newSessionResult.rows[0].id
 
       // Store the encrypted keys
       const insertKeysQuery = `
-        INSERT INTO public.hashes (userId, custodyAddress, deviceId, encryptedprivatekey, encryptedpublickey)
+        INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
         VALUES ($1, $2, $3, $4, $5)
       `
       await writeClient.query(insertKeysQuery, [
@@ -172,8 +172,8 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
 
       const updateSessionQuery = `
         UPDATE public.sessions
-        SET id = $1, expiresAt = $2, deviceId = $3
-        WHERE userId = $4
+        SET session = $1, expiresAt = $2, deviceid = $3
+        WHERE userid = $4
         RETURNING id
       `
       const updatedSessionResult = await writeClient.query(updateSessionQuery, [
@@ -182,13 +182,13 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         deviceId,
         userId,
       ])
-      id = updatedSessionResult.rows[0].id
+      sessionId = updatedSessionResult.rows[0].id
     }
 
     return c.json({
       success: true,
       userId,
-      id,
+      sessionId,
     })
   } catch (error: unknown) {
     let errorMessage = "An unknown error occurred"
@@ -198,6 +198,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
     return c.json({ success: false, message: errorMessage }, 500)
   }
 })
+
 
 app.post("/signMessageWithSession", async (c) => {
   try {

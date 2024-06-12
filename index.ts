@@ -1,4 +1,4 @@
-import { ed25519} from "@noble/curves/ed25519"
+import { ed25519 } from "@noble/curves/ed25519"
 import { blake3 } from "@noble/hashes/blake3"
 import { csrf } from 'hono/csrf'
 import { getCookie } from "hono/cookie"
@@ -7,11 +7,11 @@ import { verifyRequestOrigin } from "lucia"
 import { origin } from "bun"
 import { app } from "./hono"
 import { kms } from "./aws"
-import { writeClient, listenClient } from "./watcher"
+import { writeClient } from "./watcher"
 import { signMessage, signMessageWithKey, verifyMessage } from "./signatures"
-import { KEY_REF, publicKey, custodyAddress } from "./keys"
+import { KEY_REF, publicKey } from "./keys"
 
-verifyRequestOrigin(origin, [ "https://www.river.ph/*"])
+verifyRequestOrigin(origin, ["https://www.river.ph/*"])
 
 // cross site request forgery helper 
 app.use(csrf())
@@ -41,15 +41,12 @@ app.use("*", async (c, next) => {
   return next()
 })
 
-
 app.get("/", async (c) => {
-	const user = c.get("user")
-	if (!user) {
-		return c.body(null, 401)
-	}
-
+  const user = c.get("user")
+  if (!user) {
+    return c.body(null, 401)
+  }
 })
-
 
 type SignatureResponse = { sig: string, signer: string }
 
@@ -61,7 +58,6 @@ function isSignatureResponse(data: any): data is SignatureResponse {
     typeof data.signer === "string"
   )
 }
-
 
 app.post("/signMessage", async (c) => {
   try {
@@ -87,7 +83,6 @@ app.post("/signMessage", async (c) => {
   }
 })
 
-
 app.post("/generateEncryptKeysAndSessionId", async (c) => {
   try {
     const { message, signedMessage, deviceId } = await c.req.json()
@@ -102,17 +97,19 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
       return c.json({ success: false, message: "Invalid signature" }, 400)
     }
 
-    // Check if the user exists
-    const selectUserQuery = `
-      SELECT id FROM public.users
-      WHERE recovery = $1
+    const publicKeyHex = Buffer.from(publicKey).toString("hex")
+
+    // Check if a custody address exists in the hashes table
+    const selectHashQuery = `
+      SELECT userId FROM public.hashes
+      WHERE custodyAddress = $1
     `
-    const userResult = await writeClient.query(selectUserQuery, [Buffer.from(publicKey).toString("hex")])
+    const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
 
     let userId
     let sessionId
 
-    if (userResult.rows.length === 0) {
+    if (hashResult.rows.length === 0) {
       // First-time user - generate keys, encrypt, and store them
       const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
       const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
@@ -137,7 +134,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         RETURNING id
       `
       const newUserResult = await writeClient.query(insertUserQuery, [
-        Buffer.from(publicKey).toString("hex"),
+        publicKeyHex,
         null,
         null,
         0,
@@ -147,7 +144,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
       const insertSessionQuery = `
         INSERT INTO public.sessions (userId, session, expiresAt, deviceId)
         VALUES ($1, $2, $3, $4)
-        RETURNING id
+        RETURNING sessionid
       `
       const newSessionResult = await writeClient.query(insertSessionQuery, [
         userId,
@@ -155,7 +152,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000), // 2 weeks from now
         deviceId,
       ])
-      sessionId = newSessionResult.rows[0].id
+      sessionId = newSessionResult.rows[0].sessionid
 
       // Store the encrypted keys
       const insertKeysQuery = `
@@ -164,20 +161,20 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
       `
       await writeClient.query(insertKeysQuery, [
         userId,
-        Buffer.from(publicKey).toString("hex"),
+        publicKeyHex,
         deviceId,
         encryptedPrivateKey.CiphertextBlob.toString("base64"),
         encryptedPublicKey.CiphertextBlob.toString("base64"),
       ])
     } else {
       // Returning user - update session ID
-      userId = userResult.rows[0].id
+      userId = hashResult.rows[0].userid
 
       const updateSessionQuery = `
         UPDATE public.sessions
         SET session = $1, expiresAt = $2, deviceId = $3
         WHERE userId = $4
-        RETURNING id
+        RETURNING sessionid
       `
       const updatedSessionResult = await writeClient.query(updateSessionQuery, [
         "updatedSessionData",
@@ -185,7 +182,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         deviceId,
         userId,
       ])
-      sessionId = updatedSessionResult.rows[0].id
+      sessionId = updatedSessionResult.rows[0].sessionid
     }
 
     return c.json({
@@ -202,7 +199,6 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
   }
 })
 
-
 app.post("/signMessageWithSession", async (c) => {
   try {
     const { sessionId, message } = await c.req.json()
@@ -215,7 +211,7 @@ app.post("/signMessageWithSession", async (c) => {
     const selectSessionQuery = `
       SELECT s.userId, u.recovery FROM public.sessions s
       JOIN public.users u ON s.userId = u.id
-      WHERE s.id = $1
+      WHERE s.sessionid = $1
     `
     const sessionResult = await writeClient.query(selectSessionQuery, [sessionId])
 
@@ -223,7 +219,7 @@ app.post("/signMessageWithSession", async (c) => {
       return c.json({ success: false, message: "Invalid session" }, 404)
     }
 
-    const { userId, recovery } = sessionResult.rows[0]
+    const { userId } = sessionResult.rows[0]
 
     // Retrieve the stored encrypted keys
     const selectKeysQuery = `
@@ -264,7 +260,6 @@ app.post("/signMessageWithSession", async (c) => {
   }
 })
 
-
 app.get("/submitToChannel", async (c) => {
   try {
     // Request a signature from the KMS VM
@@ -289,8 +284,7 @@ app.get("/submitToChannel", async (c) => {
 
     if (isValid) {
       // Generate a BLAKE3 hash for submissionId
-      //  const submissionId = blake3(new TextEncoder().encode(MESSAGE))
-      const submissionId = blake3(MESSAGE)
+      const submissionId = blake3(new TextEncoder().encode(MESSAGE))
 
       // Insert the new row into the submissions table
       const insertQuery = `
@@ -314,13 +308,6 @@ app.get("/submitToChannel", async (c) => {
     }
   } catch (error) {
     return c.json({ success: false, message: error })
-  }
-})
-
-app.get("/", async (c) => {
-  const user = c.get("user")
-  if (!user) {
-    return c.body(null, 401)
   }
 })
 

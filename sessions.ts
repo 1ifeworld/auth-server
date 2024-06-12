@@ -19,7 +19,7 @@ declare module 'lucia' {
 
 export interface SessionAttributes extends DatabaseSessionAttributes {
   created?: Date
-  session?: string
+  id?: string
 }
 
 // Placeholder userId
@@ -30,7 +30,7 @@ export const attributes: SessionAttributes = {
   userid: userId,
   expiresAt: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
   created: new Date(),
-  session: 'exampleSessionData',
+  id: 'exampleSessionData',
   deviceId: deviceId,
 }
 

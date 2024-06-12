@@ -15,7 +15,7 @@ export type SelectUser = typeof usersTable.$inferSelect
 
 // Define the sessions table with the required columns
 export const sessionsTable = pgTable('sessions', {
-  id: text('id').primaryKey(),
+  id: text('sessionid').primaryKey(),
   userid: text('userid').notNull().references(() => usersTable.id),
   deviceid: text('deviceid').notNull(),
   created: timestamp('created'),

@@ -153,7 +153,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
       // userId = newUserResult.rows[0].id
 
       const insertSessionQuery = `
-        INSERT INTO public.sessions (userid, session, expiresAt, deviceid)
+        INSERT INTO public.sessions (userid, id, expiresAt, deviceid)
         VALUES ($1, $2, $3, $4)
         RETURNING id
       `
@@ -183,7 +183,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
 
       const updateSessionQuery = `
         UPDATE public.sessions
-        SET session = $1, expiresAt = $2, deviceid = $3
+        SET id = $1, expiresAt = $2, deviceid = $3
         WHERE userid = $4
         RETURNING id
       `

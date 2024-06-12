@@ -3,8 +3,8 @@ import { app } from "./hono"
 
 const { Client } = pg
 
-const listenConnectionString = process.env.LISTEN_DATABASE_URL
-const writeConnectionString = process.env.WRITE_DATABASE_URL
+const listenConnectionString = process.env.LISTEN_DATABASE_URL!
+const writeConnectionString = process.env.WRITE_DATABASE_URL!
 
 export const listenClient = new Client({
   connectionString: listenConnectionString,
@@ -38,8 +38,8 @@ async function ensureTablesExist() {
     // Create users table
     await writeClient.query(`
       CREATE TABLE IF NOT EXISTS public.users (
-        id SERIAL PRIMARY KEY,
-        "to" TEXT,
+        userid SERIAL PRIMARY KEY,
+        to TEXT,
         recovery TEXT,
         timestamp TIMESTAMP,
         log_addr TEXT,
@@ -50,24 +50,23 @@ async function ensureTablesExist() {
     // Create sessions table
     await writeClient.query(`
       CREATE TABLE IF NOT EXISTS public.sessions (
-        id TEXT PRIMARY KEY,
-        userId INTEGER NOT NULL REFERENCES public.users(id),
-        session TEXT,
+        sessionid TEXT PRIMARY KEY,
+        userid TEXT NOT NULL REFERENCES public.users(userid),
+        deviceid TEXT NOT NULL,
         created TIMESTAMP,
-        expiresAt TIMESTAMP NOT NULL,
-        deviceId TEXT NOT NULL
+        expiresAt TIMESTAMP NOT NULL
       )
     `)
 
     // Create hashes table
     await writeClient.query(`
       CREATE TABLE IF NOT EXISTS public.hashes (
-        userId INTEGER NOT NULL REFERENCES public.users(id),
+        userid TEXT NOT NULL REFERENCES public.users(userid),
         custodyAddress TEXT NOT NULL,
-        deviceId TEXT NOT NULL,
+        deviceid TEXT NOT NULL,
         encryptedpublickey TEXT NOT NULL,
         encryptedprivatekey TEXT NOT NULL,
-        PRIMARY KEY (userId, custodyAddress, deviceId)
+        PRIMARY KEY (userid, custodyAddress, deviceid)
       )
     `)
 
@@ -88,7 +87,7 @@ async function checkAndReplicateData() {
 
     const queryResult = await listenClient.query(
       `
-      SELECT id, "to", recovery, timestamp, log_addr, block_num FROM users
+      SELECT userid, "to", recovery, timestamp, log_addr, block_num FROM users
       WHERE block_num > $1
       ORDER BY block_num ASC
     `,
@@ -98,14 +97,14 @@ async function checkAndReplicateData() {
     if (queryResult.rows.length > 0) {
       const res = await writeClient.query(
         `
-  INSERT INTO public.users (id, "to", recovery, timestamp, log_addr, block_num)
+  INSERT INTO public.users (userid, "to", recovery, timestamp, log_addr, block_num)
   SELECT * FROM unnest($1::NUMERIC[], $2::TEXT[], $3::TEXT[], $4::TIMESTAMP[], $5::TEXT[], $6::NUMERIC[])
-  ON CONFLICT (id) DO UPDATE
+  ON CONFLICT (userid) DO UPDATE
   SET "to" = EXCLUDED."to", recovery = EXCLUDED.recovery, timestamp = EXCLUDED.timestamp, log_addr = EXCLUDED.log_addr, block_num = EXCLUDED.block_num
   RETURNING *
 `,
         [
-          queryResult.rows.map((row) => row.id),
+          queryResult.rows.map((row) => row.userid),
           queryResult.rows.map((row) => row.to),
           queryResult.rows.map((row) => row.recovery),
           queryResult.rows.map((row) => row.timestamp),

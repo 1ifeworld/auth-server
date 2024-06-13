@@ -381,35 +381,35 @@ app.use(csrf())
 
 const MESSAGE = 'NADA' // placeholder message
 
-// app.use("*", async (c, next) => {
-//   const id = getCookie(c, lucia.sessionCookieName) ?? null
-//   if (!id) {
-//     c.set("user", null)
-//     c.set("session", null)
-//     return next()
-//   }
-//   const { session, user } = await lucia.validateSession(id)
-//   if (session && session.fresh) {
-//     c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
-//       append: true,
-//     })
-//   }
-//   if (!session) {
-//     c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
-//       append: true,
-//     })
-//   }
-//   c.set("user", user)
-//   c.set("session", session)
-//   return next()
-// })
+app.use("*", async (c, next) => {
+  const id = getCookie(c, lucia.sessionCookieName) ?? null
+  if (!id) {
+    c.set("user", null)
+    c.set("session", null)
+    return next()
+  }
+  const { session, user } = await lucia.validateSession(id)
+  if (session && session.fresh) {
+    c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
+      append: true,
+    })
+  }
+  if (!session) {
+    c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
+      append: true,
+    })
+  }
+  c.set("user", user)
+  c.set("session", session)
+  return next()
+})
 
-// app.get('/', async (c) => {
-//   const user = c.get('user')
-//   if (!user) {
-//     return c.body(null, 401)
-//   }
-// })
+app.get('/', async (c) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.body(null, 401)
+  }
+})
 
 type SignatureResponse = { sig: string; signer: string }
 

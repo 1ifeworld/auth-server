@@ -11,6 +11,7 @@ import { writeClient } from "./watcher"
 import { signMessage, signMessageWithKey, verifyMessage } from "./signatures"
 import { KEY_REF, publicKey } from "./keys"
 import { randomBytes } from "@noble/hashes/utils"
+import { generateRandomInteger, generateRandomString } from "oslo/crypto"
 
 // verifyRequestOrigin(origin, ["https://www.river.ph/*"])
 
@@ -111,8 +112,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
     const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
 
     console.log({hashResult})
-
-    let userId
+    const userId = generateRandomInteger(100)
     let sessionId
 
     if (hashResult.rows.length === 0) {
@@ -160,10 +160,11 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
       `
       const newSessionResult = await writeClient.query(insertSessionQuery, [
         userId,
-        "sessionData",
+        generateRandomString(10, 'a-z'),
         new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000), // 2 weeks from now
         deviceId,
       ])
+
       sessionId = newSessionResult.rows[0].id
 
       // Store the encrypted keys
@@ -173,17 +174,18 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
         VALUES ($1, $2, $3, $4, $5)
       `
-    
+
       await writeClient.query(insertKeysQuery, [
-        userId = randomBytes(10),
+        userId,
         publicKeyHex,
         deviceId,
         encryptedPrivateKey.CiphertextBlob.toString("base64"),
         encryptedPublicKey.CiphertextBlob.toString("base64"),
       ])
     } else {
+
       // Returning user - update session ID
-      userId = hashResult.rows[0].userid
+      // userId = hashResult.rows[0].userid
 
       console.log({userId})
 

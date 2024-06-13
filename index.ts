@@ -10,6 +10,7 @@ import { kms } from "./aws"
 import { writeClient } from "./watcher"
 import { signMessage, signMessageWithKey, verifyMessage } from "./signatures"
 import { KEY_REF, publicKey } from "./keys"
+import { randomBytes } from "@noble/hashes/utils"
 
 // verifyRequestOrigin(origin, ["https://www.river.ph/*"])
 
@@ -166,12 +167,15 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
       sessionId = newSessionResult.rows[0].id
 
       // Store the encrypted keys
+
+      console.log("prestorekeys")
       const insertKeysQuery = `
         INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
         VALUES ($1, $2, $3, $4, $5)
       `
+    
       await writeClient.query(insertKeysQuery, [
-        userId,
+        userId = randomBytes(10),
         publicKeyHex,
         deviceId,
         encryptedPrivateKey.CiphertextBlob.toString("base64"),
@@ -180,6 +184,8 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
     } else {
       // Returning user - update session ID
       userId = hashResult.rows[0].userid
+
+      console.log({userId})
 
       const updateSessionQuery = `
         UPDATE public.sessions
@@ -194,7 +200,10 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         userId,
       ])
       sessionId = updatedSessionResult.rows[0].id
+      console.log(updatedSessionResult)
+
     }
+
 
     return c.json({
       success: true,

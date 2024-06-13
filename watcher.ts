@@ -21,6 +21,8 @@ listenClient
     console.error('Connection error with Source DB:', (err as Error).stack),
   )
 
+  console.log({listenClient})
+
 writeClient
   .connect()
   .then(() => {
@@ -33,6 +35,8 @@ writeClient
       (err as Error).stack,
     ),
   )
+
+  console.log({writeClient})
 
 async function ensureTablesExist() {
   try {

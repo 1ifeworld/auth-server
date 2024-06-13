@@ -16,47 +16,47 @@
 // // verifyRequestOrigin(origin, ["https://www.river.ph/*"])
 
 // // // cross site request forgery helper
-// // app.use(csrf())
-// // console.log("after app.use")
+// app.use(csrf())
+// console.log("after app.use")
 
 // const MESSAGE = 'NADA' // placeholder message
 
-// // app.use("*", async (c, next) => {
-// //   const id = getCookie(c, lucia.sessionCookieName) ?? null
-// //   if (!id) {
-// //     c.set("user", null)
-// //     c.set("session", null)
-// //     return next()
-// //   }
-// //   const { session, user } = await lucia.validateSession(id)
-// //   if (session && session.fresh) {
-// //     c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
-// //       append: true,
-// //     })
-// //   }
-// //   if (!session) {
-// //     c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
-// //       append: true,
-// //     })
-// //   }
-// //   c.set("user", user)
-// //   console.log({user})
-// //   c.set("session", session)
-// //   console.log({session})
-// //   return next()
-// // })
+// app.use("*", async (c, next) => {
+//   const id = getCookie(c, lucia.sessionCookieName) ?? null
+//   if (!id) {
+//     c.set("user", null)
+//     c.set("session", null)
+//     return next()
+//   }
+//   const { session, user } = await lucia.validateSession(id)
+//   if (session && session.fresh) {
+//     c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
+//       append: true,
+//     })
+//   }
+//   if (!session) {
+//     c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
+//       append: true,
+//     })
+//   }
+//   c.set("user", user)
+//   console.log({user})
+//   c.set("session", session)
+//   console.log({session})
+//   return next()
+// })
 
-// // console.log("post app * * *")
+// console.log("post app * * *")
 
-// // app.get('/', async (c) => {
-// //   const user = c.get('user')
-// //   console.log({inget: user})
-// //   if (!user) {
-// //     return c.body(null, 401)
-// //   }
-// // })
+// app.get('/', async (c) => {
+//   const user = c.get('user')
+//   console.log({inget: user})
+//   if (!user) {
+//     return c.body(null, 401)
+//   }
+// })
 
-// // console.log("post ////")
+// console.log("post ////")
 
 // type SignatureResponse = { sig: string, signer: string }
 
@@ -92,6 +92,120 @@
 //     return c.json({ success: false, message: errorMessage }, 500)
 //   }
 // })
+
+// app.post('/generateEncryptKeysAndSessionId', async (c) => {
+//   console.log('IN ENCRYPT ROUTE')
+//   try {
+//     const { message, signedMessage, deviceId } = await c.req.json()
+
+//     if (!message || !signedMessage || !deviceId) {
+//       return c.json({ success: false, message: 'Missing parameters' }, 400)
+//     }
+
+//     // Verify the signed message
+//     const isValid = verifyMessage(
+//       message,
+//       signedMessage,
+//       Buffer.from(publicKey).toString('hex'),
+//     )
+//     if (!isValid) {
+//       return c.json({ success: false, message: 'Invalid signature' }, 400)
+//     }
+
+//     console.log({ isValid })
+
+//     const publicKeyHex = Buffer.from(publicKey).toString('hex')
+
+//     // Check if a custody address exists in the hashes table
+//     const selectHashQuery = `
+//       SELECT userid FROM public.hashes
+//       WHERE custodyAddress = $1
+//     `
+//     const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
+
+//     console.log({ hashResult })
+//     const userId = generateRandomInteger(100)
+//     let sessionId
+
+//     if (hashResult.rows.length === 0) {
+//       console.log('first time user!')
+//       // First-time user - generate keys, encrypt, and store them
+//       const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
+//       const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
+
+//       const encryptedPrivateKey = await kms
+//         .encrypt({
+//           KeyId: KEY_REF,
+//           Plaintext: Buffer.from(eddsaPrivateKey),
+//         })
+//         .promise()
+
+//       const encryptedPublicKey = await kms
+//         .encrypt({
+//           KeyId: KEY_REF,
+//           Plaintext: Buffer.from(eddsaPublicKey),
+//         })
+//         .promise()
+
+//       if (
+//         !encryptedPrivateKey.CiphertextBlob ||
+//         !encryptedPublicKey.CiphertextBlob
+//       ) {
+//         throw new Error('Encryption failed')
+//       }
+
+//       // Store the encrypted keys
+//       console.log('prestorekeys')
+//       const insertKeysQuery = `
+//         INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
+//         VALUES ($1, $2, $3, $4, $5)
+//       `
+
+//       await writeClient.query(insertKeysQuery, [
+//         userId,
+//         publicKeyHex,
+//         deviceId,
+//         encryptedPrivateKey.CiphertextBlob.toString('base64'),
+//         encryptedPublicKey.CiphertextBlob.toString('base64'),
+//       ])
+
+//       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
+
+//       // Create a session with Lucia
+//       const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
+//       sessionId = session.id
+//     } else {
+//       console.log('returning user!')
+//       // Returning user - update session
+//       const userId = hashResult.rows[0].userid
+
+//       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
+//       const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
+//       sessionId = session.id
+
+//       console.log({ userId, sessionId })
+//     }
+
+//     // Create session cookie
+//     const sessionCookie = lucia.createSessionCookie(sessionId)
+//     console.log({sessionCookie})
+
+//     c.header("Set-Cookie", sessionCookie.serialize(), { append: true })
+
+//     return c.json({
+//       success: true,
+//       userId,
+//       sessionId,
+//     })
+//   } catch (error: unknown) {
+//     let errorMessage = 'An unknown error occurred'
+//     if (error instanceof Error) {
+//       errorMessage = error.message
+//     }
+//     return c.json({ success: false, message: errorMessage }, 500)
+//   }
+// })
+
 
 
 // app.post('/signMessageWithSession', async (c) => {
@@ -239,10 +353,10 @@
 // })
 
 // console.log("served")
-
 // console.log(
 //   `Hono server started on http://localhost:${process.env.PORT || 3030}`,
 // )
+
 
 
 import { ed25519 } from '@noble/curves/ed25519'
@@ -393,7 +507,40 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
         throw new Error('Encryption failed')
       }
 
+      // const insertUserQuery = `
+      //   INSERT INTO public.users (recovery, "to", log_addr, block_num)
+      //   VALUES ($1, $2, $3, $4)
+      //   RETURNING userid
+      // `
+
+      // const newUserResult = await writeClient.query(insertUserQuery, [
+      //   publicKeyHex,
+      //   null,
+      //   null,
+      //   0,
+      // ])
+
+      // console.log({newUserResult})
+
+      // // this is not real lol
+      // userId = newUserResult.rows[0].id
+
+      const insertSessionQuery = `
+        INSERT INTO public.sessions (userid, id, expiration, deviceid)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id
+      `
+      const newSessionResult = await writeClient.query(insertSessionQuery, [
+        userId,
+        generateRandomString(10, 'a-z'),
+        new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000), // 2 weeks from now
+        deviceId,
+      ])
+
+      sessionId = newSessionResult.rows[0].id
+
       // Store the encrypted keys
+
       console.log('prestorekeys')
       const insertKeysQuery = `
         INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
@@ -407,29 +554,27 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
         encryptedPrivateKey.CiphertextBlob.toString('base64'),
         encryptedPublicKey.CiphertextBlob.toString('base64'),
       ])
-
-      const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
-
-      // Create a session with Lucia
-      const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
-      sessionId = session.id
     } else {
-      console.log('returning user!')
-      // Returning user - update session
-      const userId = hashResult.rows[0].userid
+      // Returning user - update session ID
+      // userId = hashResult.rows[0].userid
 
-      const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
-      const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
-      sessionId = session.id
+      console.log({ userId })
 
-      console.log({ userId, sessionId })
+      const updateSessionQuery = `
+        UPDATE public.sessions
+        SET id = $1, expiration = $2, deviceid = $3
+        WHERE userid = $4
+        RETURNING id
+      `
+      const updatedSessionResult = await writeClient.query(updateSessionQuery, [
+        'updatedSessionData',
+        new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
+        deviceId,
+        userId,
+      ])
+      sessionId = updatedSessionResult.rows[0].id
+      console.log(updatedSessionResult)
     }
-
-    // Create session cookie
-    const sessionCookie = lucia.createSessionCookie(sessionId)
-    console.log({sessionCookie})
-
-    c.header("Set-Cookie", sessionCookie.serialize(), { append: true })
 
     return c.json({
       success: true,
@@ -444,8 +589,6 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
     return c.json({ success: false, message: errorMessage }, 500)
   }
 })
-
-
 
 app.post('/signMessageWithSession', async (c) => {
   try {

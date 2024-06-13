@@ -1,10 +1,9 @@
-import { Lucia, TimeSpan, type DatabaseSessionAttributes } from 'lucia'
-import { adapter } from './db'
 import { randomBytes } from '@noble/hashes/utils'
-
+import { type DatabaseSessionAttributes, Lucia, TimeSpan } from 'lucia'
+import { adapter } from './db'
 
 export const lucia = new Lucia(adapter, {
-  sessionExpiresIn: new TimeSpan(2, "w")
+  sessionExpiresIn: new TimeSpan(2, 'w'),
 })
 
 declare module 'lucia' {
@@ -36,7 +35,7 @@ export const attributes: SessionAttributes = {
   deviceId: deviceId,
 }
 
-export function generateRandomSessionString(length: number = 32): string {
+export function generateRandomSessionString(length = 32): string {
   const randomBuffer = randomBytes(length)
   return Buffer.from(randomBuffer).toString('hex')
 }
@@ -101,4 +100,3 @@ Session cookies guide:
 
 https://lucia-auth.com/guides/validate-session-cookies/
 */
-

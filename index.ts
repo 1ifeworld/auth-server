@@ -1,21 +1,21 @@
-import { ed25519 } from "@noble/curves/ed25519"
-import { blake3 } from "@noble/hashes/blake3"
+import { ed25519 } from '@noble/curves/ed25519'
+import { blake3 } from '@noble/hashes/blake3'
+import { randomBytes } from '@noble/hashes/utils'
+import { origin } from 'bun'
+import { getCookie } from 'hono/cookie'
 import { csrf } from 'hono/csrf'
-import { getCookie } from "hono/cookie"
-import { lucia } from "./sessions"
-import { verifyRequestOrigin } from "lucia"
-import { origin } from "bun"
-import { app } from "./hono"
-import { kms } from "./aws"
-import { writeClient } from "./watcher"
-import { signMessage, signMessageWithKey, verifyMessage } from "./signatures"
-import { KEY_REF, publicKey } from "./keys"
-import { randomBytes } from "@noble/hashes/utils"
-import { generateRandomInteger, generateRandomString } from "oslo/crypto"
+import { verifyRequestOrigin } from 'lucia'
+import { generateRandomInteger, generateRandomString } from 'oslo/crypto'
+import { kms } from './aws'
+import { app } from './hono'
+import { KEY_REF, publicKey } from './keys'
+import { lucia } from './sessions'
+import { signMessage, signMessageWithKey, verifyMessage } from './signatures'
+import { writeClient } from './watcher'
 
 // verifyRequestOrigin(origin, ["https://www.river.ph/*"])
 
-// // cross site request forgery helper 
+// // cross site request forgery helper
 // app.use(csrf())
 
 const MESSAGE = 'NADA' // placeholder message
@@ -43,30 +43,30 @@ const MESSAGE = 'NADA' // placeholder message
 //   return next()
 // })
 
-app.get("/", async (c) => {
-  const user = c.get("user")
+app.get('/', async (c) => {
+  const user = c.get('user')
   if (!user) {
     return c.body(null, 401)
   }
 })
 
-type SignatureResponse = { sig: string, signer: string }
+type SignatureResponse = { sig: string; signer: string }
 
 function isSignatureResponse(data: any): data is SignatureResponse {
   return (
-    typeof data === "object" &&
+    typeof data === 'object' &&
     data !== null &&
-    typeof data.sig === "string" &&
-    typeof data.signer === "string"
+    typeof data.sig === 'string' &&
+    typeof data.signer === 'string'
   )
 }
 
-app.post("/signMessage", async (c) => {
+app.post('/signMessage', async (c) => {
   try {
     const { message } = await c.req.json()
 
     if (!message) {
-      return c.json({ success: false, message: "No message provided" }, 400)
+      return c.json({ success: false, message: 'No message provided' }, 400)
     }
 
     const signedMessage = signMessage(message)
@@ -77,7 +77,7 @@ app.post("/signMessage", async (c) => {
       signedMessage,
     })
   } catch (error: unknown) {
-    let errorMessage = "An unknown error occurred"
+    let errorMessage = 'An unknown error occurred'
     if (error instanceof Error) {
       errorMessage = error.message
     }
@@ -85,24 +85,28 @@ app.post("/signMessage", async (c) => {
   }
 })
 
-app.post("/generateEncryptKeysAndSessionId", async (c) => {
-  console.log("IN ENCRYPT ROUTE")
+app.post('/generateEncryptKeysAndSessionId', async (c) => {
+  console.log('IN ENCRYPT ROUTE')
   try {
     const { message, signedMessage, deviceId } = await c.req.json()
 
     if (!message || !signedMessage || !deviceId) {
-      return c.json({ success: false, message: "Missing parameters" }, 400)
+      return c.json({ success: false, message: 'Missing parameters' }, 400)
     }
 
     // Verify the signed message
-    const isValid = verifyMessage(message, signedMessage, Buffer.from(publicKey).toString("hex"))
+    const isValid = verifyMessage(
+      message,
+      signedMessage,
+      Buffer.from(publicKey).toString('hex'),
+    )
     if (!isValid) {
-      return c.json({ success: false, message: "Invalid signature" }, 400)
+      return c.json({ success: false, message: 'Invalid signature' }, 400)
     }
 
-    console.log({isValid})
+    console.log({ isValid })
 
-    const publicKeyHex = Buffer.from(publicKey).toString("hex")
+    const publicKeyHex = Buffer.from(publicKey).toString('hex')
 
     // Check if a custody address exists in the hashes table
     const selectHashQuery = `
@@ -111,28 +115,35 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
     `
     const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
 
-    console.log({hashResult})
+    console.log({ hashResult })
     const userId = generateRandomInteger(100)
     let sessionId
 
     if (hashResult.rows.length === 0) {
-      console.log("first time user!")
+      console.log('first time user!')
       // First-time user - generate keys, encrypt, and store them
       const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
       const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
 
-      const encryptedPrivateKey = await kms.encrypt({
-        KeyId: KEY_REF,
-        Plaintext: Buffer.from(eddsaPrivateKey),
-      }).promise()
+      const encryptedPrivateKey = await kms
+        .encrypt({
+          KeyId: KEY_REF,
+          Plaintext: Buffer.from(eddsaPrivateKey),
+        })
+        .promise()
 
-      const encryptedPublicKey = await kms.encrypt({
-        KeyId: KEY_REF,
-        Plaintext: Buffer.from(eddsaPublicKey),
-      }).promise()
+      const encryptedPublicKey = await kms
+        .encrypt({
+          KeyId: KEY_REF,
+          Plaintext: Buffer.from(eddsaPublicKey),
+        })
+        .promise()
 
-      if (!encryptedPrivateKey.CiphertextBlob || !encryptedPublicKey.CiphertextBlob) {
-        throw new Error("Encryption failed")
+      if (
+        !encryptedPrivateKey.CiphertextBlob ||
+        !encryptedPublicKey.CiphertextBlob
+      ) {
+        throw new Error('Encryption failed')
       }
 
       // const insertUserQuery = `
@@ -150,7 +161,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
 
       // console.log({newUserResult})
 
-      // // this is not real lol 
+      // // this is not real lol
       // userId = newUserResult.rows[0].id
 
       const insertSessionQuery = `
@@ -169,7 +180,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
 
       // Store the encrypted keys
 
-      console.log("prestorekeys")
+      console.log('prestorekeys')
       const insertKeysQuery = `
         INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
         VALUES ($1, $2, $3, $4, $5)
@@ -179,15 +190,14 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         userId,
         publicKeyHex,
         deviceId,
-        encryptedPrivateKey.CiphertextBlob.toString("base64"),
-        encryptedPublicKey.CiphertextBlob.toString("base64"),
+        encryptedPrivateKey.CiphertextBlob.toString('base64'),
+        encryptedPublicKey.CiphertextBlob.toString('base64'),
       ])
     } else {
-
       // Returning user - update session ID
       // userId = hashResult.rows[0].userid
 
-      console.log({userId})
+      console.log({ userId })
 
       const updateSessionQuery = `
         UPDATE public.sessions
@@ -196,16 +206,14 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
         RETURNING id
       `
       const updatedSessionResult = await writeClient.query(updateSessionQuery, [
-        "updatedSessionData",
-        new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000), 
+        'updatedSessionData',
+        new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
         deviceId,
         userId,
       ])
       sessionId = updatedSessionResult.rows[0].id
       console.log(updatedSessionResult)
-
     }
-
 
     return c.json({
       success: true,
@@ -213,7 +221,7 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
       sessionId,
     })
   } catch (error: unknown) {
-    let errorMessage = "An unknown error occurred"
+    let errorMessage = 'An unknown error occurred'
     if (error instanceof Error) {
       errorMessage = error.message
     }
@@ -221,13 +229,12 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
   }
 })
 
-
-app.post("/signMessageWithSession", async (c) => {
+app.post('/signMessageWithSession', async (c) => {
   try {
     const { sessionId, message } = await c.req.json()
 
     if (!sessionId || !message) {
-      return c.json({ success: false, message: "Missing parameters" }, 400)
+      return c.json({ success: false, message: 'Missing parameters' }, 400)
     }
 
     // Retrieve the session and associated user
@@ -236,11 +243,13 @@ app.post("/signMessageWithSession", async (c) => {
       JOIN public.hashes h ON s.userid = h.userid
       WHERE s.id = $1
     `
-    const sessionResult = await writeClient.query(selectSessionQuery, [sessionId])
-    console.log({sessionResult})
+    const sessionResult = await writeClient.query(selectSessionQuery, [
+      sessionId,
+    ])
+    console.log({ sessionResult })
 
     if (sessionResult.rows.length === 0) {
-      return c.json({ success: false, message: "Invalid session" }, 404)
+      return c.json({ success: false, message: 'Invalid session' }, 404)
     }
 
     const { userid } = sessionResult.rows[0]
@@ -253,30 +262,46 @@ app.post("/signMessageWithSession", async (c) => {
     const keysResult = await writeClient.query(selectKeysQuery, [userid])
 
     if (keysResult.rows.length === 0) {
-      return c.json({ success: false, message: "Keys not found" }, 404)
+      return c.json({ success: false, message: 'Keys not found' }, 404)
     }
 
     const { encryptedprivatekey } = keysResult.rows[0]
 
     // Decrypt the private key using AWS KMS
-    const decryptedPrivateKey = await kms.decrypt({
-      CiphertextBlob: Buffer.from(encryptedprivatekey, "base64"),
-    }).promise()
+    const decryptedPrivateKey = await kms
+      .decrypt({
+        CiphertextBlob: Buffer.from(encryptedprivatekey, 'base64'),
+      })
+      .promise()
 
     if (!decryptedPrivateKey.Plaintext) {
-      throw new Error("Decryption failed")
+      throw new Error('Decryption failed')
     }
 
     // Sign the message with the decrypted EDDSA private key
-    const eddsaPrivateKey = new Uint8Array(decryptedPrivateKey.Plaintext as ArrayBuffer)
+    const eddsaPrivateKey = new Uint8Array(
+      decryptedPrivateKey.Plaintext as ArrayBuffer,
+    )
     const signedMessage = signMessageWithKey(message, eddsaPrivateKey)
+
+    // Re-encrypt the private key using AWS KMS
+    const reEncryptedPrivateKey = await kms
+      .encrypt({
+        KeyId: KEY_REF,
+        Plaintext: Buffer.from(eddsaPrivateKey),
+      })
+      .promise()
+
+    if (!reEncryptedPrivateKey.CiphertextBlob) {
+      throw new Error('Re-encryption failed')
+    }
 
     return c.json({
       success: true,
       signedMessage,
     })
   } catch (error: unknown) {
-    let errorMessage = "An unknown error occurred"
+    let errorMessage = 'An unknown error occurred'
     if (error instanceof Error) {
       errorMessage = error.message
     }
@@ -284,23 +309,26 @@ app.post("/signMessageWithSession", async (c) => {
   }
 })
 
-app.get("/submitToChannel", async (c) => {
+app.get('/submitToChannel', async (c) => {
   try {
     // Request a signature from the KMS VM
-    const response = await fetch(`https://240608-server-studies-production.up.railway.app/signMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: MESSAGE }),
-    })
+    const response = await fetch(
+      `https://240608-server-studies-production.up.railway.app/signMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: MESSAGE }),
+      },
+    )
 
     if (!response.ok) {
-      throw new Error("Failed to get signature from KMS")
+      throw new Error('Failed to get signature from KMS')
     }
 
     const data: unknown = await response.json()
 
     if (!isSignatureResponse(data)) {
-      throw new Error("KMS return invalid")
+      throw new Error('KMS return invalid')
     }
 
     const { sig, signer } = data
@@ -315,20 +343,15 @@ app.get("/submitToChannel", async (c) => {
        INSERT INTO public.submissions (submissionId, submissionContents, submissionSig, submissionSigner)
        VALUES ($1, $2, $3, $4)
      `
-      await writeClient.query(insertQuery, [
-        submissionId,
-        MESSAGE,
-        sig,
-        signer,
-      ])
+      await writeClient.query(insertQuery, [submissionId, MESSAGE, sig, signer])
 
       return c.json({
         success: true,
-        message: "Signature verified successfully",
+        message: 'Signature verified successfully',
         body: { submissionId, MESSAGE, sig, signer },
       })
     } else {
-      return c.json({ success: false, message: "Failed to verify signature" })
+      return c.json({ success: false, message: 'Failed to verify signature' })
     }
   } catch (error) {
     return c.json({ success: false, message: error })
@@ -340,4 +363,6 @@ Bun.serve({
   port: process.env.PORT || 3030,
 })
 
-console.log(`Hono server started on http://localhost:${process.env.PORT || 3030}`)
+console.log(
+  `Hono server started on http://localhost:${process.env.PORT || 3030}`,
+)

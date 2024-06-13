@@ -1,10 +1,9 @@
-import { Hono } from "hono"
-import type { User, Session } from 'lucia'
-
+import { Hono } from 'hono'
+import type { Session, User } from 'lucia'
 
 export const app = new Hono<{
-	Variables: {
-		user: User | null
-		session: Session | null
-	}
+  Variables: {
+    user: User | null
+    session: Session | null
+  }
 }>()

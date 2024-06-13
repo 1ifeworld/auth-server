@@ -1,5 +1,5 @@
-import pg from "pg"
-import { app } from "./hono"
+import pg from 'pg'
+import { app } from './hono'
 
 const { Client } = pg
 
@@ -16,24 +16,27 @@ export const writeClient = new Client({
 
 listenClient
   .connect()
-  .then(() => console.log("Connected to Source DB successfully"))
+  .then(() => console.log('Connected to Source DB successfully'))
   .catch((err) =>
-    console.error("Connection error with Source DB:", (err as Error).stack)
+    console.error('Connection error with Source DB:', (err as Error).stack),
   )
 
 writeClient
   .connect()
   .then(() => {
-    console.log("Connected to Destination DB successfully")
+    console.log('Connected to Destination DB successfully')
     ensureTablesExist()
   })
   .catch((err) =>
-    console.error("Connection error with Destination DB:", (err as Error).stack)
+    console.error(
+      'Connection error with Destination DB:',
+      (err as Error).stack,
+    ),
   )
 
 async function ensureTablesExist() {
   try {
-    await writeClient.query("BEGIN")
+    await writeClient.query('BEGIN')
 
     // Create users table
     await writeClient.query(`
@@ -70,11 +73,14 @@ async function ensureTablesExist() {
       )
     `)
 
-    await writeClient.query("COMMIT")
-    console.log("Schema and tables verified/created successfully")
+    await writeClient.query('COMMIT')
+    console.log('Schema and tables verified/created successfully')
   } catch (err) {
-    await writeClient.query("ROLLBACK")
-    console.error("Error in schema/table creation in destination DB:", (err as Error).stack)
+    await writeClient.query('ROLLBACK')
+    console.error(
+      'Error in schema/table creation in destination DB:',
+      (err as Error).stack,
+    )
   }
 }
 
@@ -83,7 +89,8 @@ async function checkAndReplicateData() {
     const maxBlockQueryResult = await writeClient.query(`
       SELECT COALESCE(MAX(block_num), 0) as max_block_number FROM public.users
     `)
-    const lastProcessedBlockNumber = maxBlockQueryResult.rows[0].max_block_number
+    const lastProcessedBlockNumber =
+      maxBlockQueryResult.rows[0].max_block_number
 
     const queryResult = await listenClient.query(
       `
@@ -91,7 +98,7 @@ async function checkAndReplicateData() {
       WHERE block_num > $1
       ORDER BY block_num ASC
     `,
-      [lastProcessedBlockNumber]
+      [lastProcessedBlockNumber],
     )
 
     if (queryResult.rows.length > 0) {
@@ -110,31 +117,35 @@ async function checkAndReplicateData() {
           queryResult.rows.map((row) => row.timestamp),
           queryResult.rows.map((row) => row.log_addr),
           queryResult.rows.map((row) => row.block_num),
-        ]
+        ],
       )
-      console.log("Data replicated:", res.rows)
+      console.log('Data replicated:', res.rows)
     }
   } catch (err) {
-    console.error("Error during data replication", (err as Error).stack)
+    console.error('Error during data replication', (err as Error).stack)
   }
 }
 
 setInterval(checkAndReplicateData, 1000)
 
-process.on("SIGINT", () => {
+process.on('SIGINT', () => {
   Promise.all([listenClient.end(), writeClient.end()])
     .then(() => {
-      console.log("Both clients disconnected")
+      console.log('Both clients disconnected')
       process.exit()
     })
-    .catch((err) => console.error("Error during disconnection", (err as Error).stack))
+    .catch((err) =>
+      console.error('Error during disconnection', (err as Error).stack),
+    )
 })
 
-app.get("/", (c) => c.text("Hello, Hono!"))
+app.get('/', (c) => c.text('Hello, Hono!'))
 
 Bun.serve({
   fetch: app.fetch,
   port: process.env.PORT || 3030,
 })
 
-console.log(`Hono server started on http://localhost:${process.env.PORT || 3030}`)
+console.log(
+  `Hono server started on http://localhost:${process.env.PORT || 3030}`,
+)

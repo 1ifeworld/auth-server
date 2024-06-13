@@ -135,6 +135,7 @@ async function checkAndReplicateData() {
 setInterval(checkAndReplicateData, 1000)
 
 process.on('SIGINT', () => {
+  console.log("yo sigint")
   Promise.all([listenClient.end(), writeClient.end()])
     .then(() => {
       console.log('Both clients disconnected')
@@ -144,4 +145,15 @@ process.on('SIGINT', () => {
       console.error('Error during disconnection', (err as Error).stack),
     )
 })
+
+Bun.serve({
+  fetch: app.fetch,
+  port: process.env.PORT || 3030,
+})
+
+console.log("served")
+
+console.log(
+  `Hono server started on http://localhost:${process.env.PORT || 3030}`,
+)
 

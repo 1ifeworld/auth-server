@@ -138,14 +138,3 @@ process.on('SIGINT', () => {
       console.error('Error during disconnection', (err as Error).stack),
     )
 })
-
-app.get('/', (c) => c.text('Hello, Hono!'))
-
-Bun.serve({
-  fetch: app.fetch,
-  port: process.env.PORT || 3030,
-})
-
-console.log(
-  `Hono server started on http://localhost:${process.env.PORT || 3030}`,
-)

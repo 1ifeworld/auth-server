@@ -296,6 +296,16 @@ app.post('/signMessageWithSession', async (c) => {
       throw new Error('Re-encryption failed')
     }
 
+    const updateKeysQuery = `
+    UPDATE public.hashes
+    SET encryptedprivatekey = $1
+    WHERE userid = $2
+  `
+  await writeClient.query(updateKeysQuery, [
+    reEncryptedPrivateKey.CiphertextBlob.toString('base64'),
+    userid,
+  ])
+
     return c.json({
       success: true,
       signedMessage,

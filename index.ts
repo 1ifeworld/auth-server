@@ -528,7 +528,9 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
 
       // Create a session with Lucia
-      const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
+      // const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
+      const session = {id: "hi"}
+
       sessionId = session.id
     } else {
       console.log('returning user!')
@@ -536,17 +538,18 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       const userId = hashResult.rows[0].userid
 
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
-      const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
+      // const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
+      const session = {id: "hi"}
       sessionId = session.id
 
       console.log({ userId, sessionId })
     }
 
-    // Create session cookie
-    const sessionCookie = lucia.createSessionCookie(sessionId)
-    console.log({sessionCookie})
+    // // Create session cookie
+    // const sessionCookie = lucia.createSessionCookie(sessionId)
+    // console.log({sessionCookie})
 
-    c.header("Set-Cookie", sessionCookie.serialize(), { append: true })
+    // c.header("Set-Cookie", sessionCookie.serialize(), { append: true })
 
     return c.json({
       success: true,

@@ -16,47 +16,47 @@ import { writeClient } from './watcher'
 // verifyRequestOrigin(origin, ["https://www.river.ph/*"])
 
 // // cross site request forgery helper
-app.use(csrf())
-console.log("after app.use")
+// app.use(csrf())
+// console.log("after app.use")
 
 const MESSAGE = 'NADA' // placeholder message
 
-app.use("*", async (c, next) => {
-  const id = getCookie(c, lucia.sessionCookieName) ?? null
-  if (!id) {
-    c.set("user", null)
-    c.set("session", null)
-    return next()
-  }
-  const { session, user } = await lucia.validateSession(id)
-  if (session && session.fresh) {
-    c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
-      append: true,
-    })
-  }
-  if (!session) {
-    c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
-      append: true,
-    })
-  }
-  c.set("user", user)
-  console.log({user})
-  c.set("session", session)
-  console.log({session})
-  return next()
-})
+// app.use("*", async (c, next) => {
+//   const id = getCookie(c, lucia.sessionCookieName) ?? null
+//   if (!id) {
+//     c.set("user", null)
+//     c.set("session", null)
+//     return next()
+//   }
+//   const { session, user } = await lucia.validateSession(id)
+//   if (session && session.fresh) {
+//     c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
+//       append: true,
+//     })
+//   }
+//   if (!session) {
+//     c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
+//       append: true,
+//     })
+//   }
+//   c.set("user", user)
+//   console.log({user})
+//   c.set("session", session)
+//   console.log({session})
+//   return next()
+// })
 
-console.log("post app * * *")
+// console.log("post app * * *")
 
-app.get('/', async (c) => {
-  const user = c.get('user')
-  console.log({inget: user})
-  if (!user) {
-    return c.body(null, 401)
-  }
-})
+// app.get('/', async (c) => {
+//   const user = c.get('user')
+//   console.log({inget: user})
+//   if (!user) {
+//     return c.body(null, 401)
+//   }
+// })
 
-console.log("post ////")
+// console.log("post ////")
 
 type SignatureResponse = { sig: string, signer: string }
 

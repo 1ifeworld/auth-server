@@ -1,5 +1,7 @@
 import { Lucia, TimeSpan, type DatabaseSessionAttributes } from 'lucia'
 import { adapter } from './db'
+import { randomBytes } from '@noble/hashes/utils'
+
 
 export const lucia = new Lucia(adapter, {
   sessionExpiresIn: new TimeSpan(2, "w")
@@ -32,6 +34,11 @@ export const attributes: SessionAttributes = {
   created: new Date(),
   id: 'exampleSessionData',
   deviceId: deviceId,
+}
+
+export function generateRandomSessionString(length: number = 32): string {
+  const randomBuffer = randomBytes(length)
+  return Buffer.from(randomBuffer).toString('hex')
 }
 
 /* 

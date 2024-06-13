@@ -1,97 +1,90 @@
-// import { ed25519 } from '@noble/curves/ed25519'
-// import { blake3 } from '@noble/hashes/blake3'
-// import { randomBytes } from '@noble/hashes/utils'
-// import { origin } from 'bun'
-// import { getCookie } from 'hono/cookie'
-// import { csrf } from 'hono/csrf'
-// import { verifyRequestOrigin } from 'lucia'
-// import { generateRandomInteger, generateRandomString } from 'oslo/crypto'
-// import { kms } from './aws'
-// import { app } from './hono'
-// import { KEY_REF, publicKey } from './keys'
-// import { lucia } from './sessions'
-// import { signMessage, signMessageWithKey, verifyMessage } from './signatures'
-// import { writeClient } from './watcher'
+import { ed25519 } from '@noble/curves/ed25519'
+import { blake3 } from '@noble/hashes/blake3'
+import { randomBytes } from '@noble/hashes/utils'
+import { origin } from 'bun'
+import { getCookie } from 'hono/cookie'
+import { csrf } from 'hono/csrf'
+import { verifyRequestOrigin } from 'lucia'
+import { generateRandomInteger, generateRandomString } from 'oslo/crypto'
+import { kms } from './aws'
+import { app } from './hono'
+import { KEY_REF, publicKey } from './keys'
+import { lucia } from './sessions'
+import { signMessage, signMessageWithKey, verifyMessage } from './signatures'
+import { writeClient } from './watcher'
 
-// // verifyRequestOrigin(origin, ["https://www.river.ph/*"])
 
-// // // cross site request forgery helper
-// // app.use(csrf())
-// // console.log("after app.use")
+app.use("*", async (c, next) => {
+  const id = getCookie(c, lucia.sessionCookieName) ?? null
+  if (!id) {
+    c.set("user", null)
+    c.set("session", null)
+    return next()
+  }
+  const { session, user } = await lucia.validateSession(id)
+  if (session && session.fresh) {
+    c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
+      append: true,
+    })
+  }
+  if (!session) {
+    c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
+      append: true,
+    })
+  }
+  c.set("user", user)
+  console.log({user})
+  c.set("session", session)
+  console.log({session})
+  return next()
+})
 
-// const MESSAGE = 'NADA' // placeholder message
+console.log("post app * * *")
 
-// // app.use("*", async (c, next) => {
-// //   const id = getCookie(c, lucia.sessionCookieName) ?? null
-// //   if (!id) {
-// //     c.set("user", null)
-// //     c.set("session", null)
-// //     return next()
-// //   }
-// //   const { session, user } = await lucia.validateSession(id)
-// //   if (session && session.fresh) {
-// //     c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
-// //       append: true,
-// //     })
-// //   }
-// //   if (!session) {
-// //     c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
-// //       append: true,
-// //     })
-// //   }
-// //   c.set("user", user)
-// //   console.log({user})
-// //   c.set("session", session)
-// //   console.log({session})
-// //   return next()
-// // })
+app.get('/', async (c) => {
+  const user = c.get('user')
+  console.log({inget: user})
+  if (!user) {
+    return c.body(null, 401)
+  }
+})
 
-// // console.log("post app * * *")
+// console.log("post ////")
 
-// // app.get('/', async (c) => {
-// //   const user = c.get('user')
-// //   console.log({inget: user})
-// //   if (!user) {
-// //     return c.body(null, 401)
-// //   }
-// // })
+type SignatureResponse = { sig: string, signer: string }
 
-// // console.log("post ////")
+function isSignatureResponse(data: any): data is SignatureResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof data.sig === 'string' &&
+    typeof data.signer === 'string'
+  )
+}
 
-// type SignatureResponse = { sig: string, signer: string }
+app.post('/signMessage', async (c) => {
+  try {
+    const { message } = await c.req.json()
 
-// function isSignatureResponse(data: any): data is SignatureResponse {
-//   return (
-//     typeof data === 'object' &&
-//     data !== null &&
-//     typeof data.sig === 'string' &&
-//     typeof data.signer === 'string'
-//   )
-// }
+    if (!message) {
+      return c.json({ success: false, message: 'No message provided' }, 400)
+    }
 
-// app.post('/signMessage', async (c) => {
-//   try {
-//     const { message } = await c.req.json()
+    const signedMessage = signMessage(message)
 
-//     if (!message) {
-//       return c.json({ success: false, message: 'No message provided' }, 400)
-//     }
-
-//     const signedMessage = signMessage(message)
-
-//     return c.json({
-//       success: true,
-//       message,
-//       signedMessage,
-//     })
-//   } catch (error: unknown) {
-//     let errorMessage = 'An unknown error occurred'
-//     if (error instanceof Error) {
-//       errorMessage = error.message
-//     }
-//     return c.json({ success: false, message: errorMessage }, 500)
-//   }
-// })
+    return c.json({
+      success: true,
+      message,
+      signedMessage,
+    })
+  } catch (error: unknown) {
+    let errorMessage = 'An unknown error occurred'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    return c.json({ success: false, message: errorMessage }, 500)
+  }
+})
 
 // app.post('/generateEncryptKeysAndSessionId', async (c) => {
 //   console.log('IN ENCRYPT ROUTE')
@@ -357,94 +350,6 @@
 // console.log(
 //   `Hono server started on http://localhost:${process.env.PORT || 3030}`,
 // )
-
-
-import { ed25519 } from '@noble/curves/ed25519'
-import { blake3 } from '@noble/hashes/blake3'
-import { randomBytes } from '@noble/hashes/utils'
-import { origin } from 'bun'
-import { getCookie } from 'hono/cookie'
-import { csrf } from 'hono/csrf'
-import { verifyRequestOrigin } from 'lucia'
-import { generateRandomInteger, generateRandomString } from 'oslo/crypto'
-import { kms } from './aws'
-import { app } from './hono'
-import { KEY_REF, publicKey } from './keys'
-import { lucia } from './sessions'
-import { signMessage, signMessageWithKey, verifyMessage } from './signatures'
-import { writeClient } from './watcher'
-
-// verifyRequestOrigin(origin, ["https://www.river.ph/*"])
-
-// // cross site request forgery helper
-// app.use(csrf())
-
-const MESSAGE = 'NADA' // placeholder message
-
-// app.use("*", async (c, next) => {
-//   const id = getCookie(c, lucia.sessionCookieName) ?? null
-//   if (!id) {
-//     c.set("user", null)
-//     c.set("session", null)
-//     return next()
-//   }
-//   const { session, user } = await lucia.validateSession(id)
-//   if (session && session.fresh) {
-//     c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
-//       append: true,
-//     })
-//   }
-//   if (!session) {
-//     c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
-//       append: true,
-//     })
-//   }
-//   c.set("user", user)
-//   c.set("session", session)
-//   return next()
-// })
-
-app.get('/', async (c) => {
-  const user = c.get('user')
-  if (!user) {
-    return c.body(null, 401)
-  }
-})
-
-type SignatureResponse = { sig: string; signer: string }
-
-function isSignatureResponse(data: any): data is SignatureResponse {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof data.sig === 'string' &&
-    typeof data.signer === 'string'
-  )
-}
-
-app.post('/signMessage', async (c) => {
-  try {
-    const { message } = await c.req.json()
-
-    if (!message) {
-      return c.json({ success: false, message: 'No message provided' }, 400)
-    }
-
-    const signedMessage = signMessage(message)
-
-    return c.json({
-      success: true,
-      message,
-      signedMessage,
-    })
-  } catch (error: unknown) {
-    let errorMessage = 'An unknown error occurred'
-    if (error instanceof Error) {
-      errorMessage = error.message
-    }
-    return c.json({ success: false, message: errorMessage }, 500)
-  }
-})
 
 app.post('/generateEncryptKeysAndSessionId', async (c) => {
   console.log('IN ENCRYPT ROUTE')

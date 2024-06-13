@@ -12,7 +12,7 @@ declare module 'lucia' {
     DatabaseSessionAttributes: DatabaseSessionAttributes
   }
   interface DatabaseSessionAttributes {
-    userid: string
+    userId: string
     expiresAt: Date
     deviceId: string
   }
@@ -28,17 +28,13 @@ const userId = 'exampleUserId'
 const deviceId = 'exampleDeviceId' // Placeholder deviceId
 
 export const attributes: SessionAttributes = {
-  userid: userId,
+  userId: userId,
   expiresAt: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
   created: new Date(),
   id: 'exampleSessionData',
   deviceId: deviceId,
 }
 
-export function generateRandomSessionString(length = 32): string {
-  const randomBuffer = randomBytes(length)
-  return Buffer.from(randomBuffer).toString('hex')
-}
 
 /* 
 To create sessions FROM DOCS:

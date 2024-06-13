@@ -22,10 +22,10 @@ export const sessionsTable = pgTable('sessions', {
   deviceid: text('deviceid').notNull(),
   created: timestamp('created'),
   expiration: timestamp('expiration').notNull(),
-  expiresAt: timestamp('expiresAt').notNull(), // Added this column
+  expiresAt: timestamp('expiresAt').notNull(), 
   userId: text('userId')
     .notNull()
-    .references(() => usersTable.id), // Added this column
+    .references(() => usersTable.id), 
 })
 
 export type InsertSession = typeof sessionsTable.$inferInsert

@@ -17,6 +17,7 @@ import { writeClient } from './watcher'
 
 // // cross site request forgery helper
 app.use(csrf())
+console.log("after app.use")
 
 const MESSAGE = 'NADA' // placeholder message
 
@@ -45,6 +46,8 @@ app.use("*", async (c, next) => {
   return next()
 })
 
+console.log("post app * * *")
+
 app.get('/', async (c) => {
   const user = c.get('user')
   console.log({inget: user})
@@ -52,6 +55,8 @@ app.get('/', async (c) => {
     return c.body(null, 401)
   }
 })
+
+console.log("post ////")
 
 type SignatureResponse = { sig: string, signer: string }
 
@@ -346,6 +351,8 @@ Bun.serve({
   fetch: app.fetch,
   port: process.env.PORT || 3030,
 })
+
+console.log("served")
 
 console.log(
   `Hono server started on http://localhost:${process.env.PORT || 3030}`,

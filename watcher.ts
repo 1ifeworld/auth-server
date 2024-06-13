@@ -3,6 +3,8 @@ import { app } from './hono'
 
 const { Client } = pg
 
+console.log("YO WATCHER")
+
 const listenConnectionString = process.env.LISTEN_DATABASE_URL!
 const writeConnectionString = process.env.WRITE_DATABASE_URL!
 

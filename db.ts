@@ -7,12 +7,16 @@ const pool = new Client({
   connectionString: process.env.DATABASE_URL!,
 })
 
-await pool.connect()
+const connected = await pool.connect()
+console.log({connected})
 
 const db = drizzle(pool)
+console.log({db})
 
 export const adapter = new DrizzlePostgreSQLAdapter(
   db,
   dbSchema.sessionsTable,
   dbSchema.usersTable,
 )
+
+

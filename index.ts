@@ -232,11 +232,12 @@ app.post("/signMessageWithSession", async (c) => {
 
     // Retrieve the session and associated user
     const selectSessionQuery = `
-      SELECT s.userid, u.recovery FROM public.sessions s
-      JOIN public.users u ON s.userid = u.id
+      SELECT s.userid, h.custodyAddress FROM public.sessions s
+      JOIN public.hashes h ON s.userid = h.userid
       WHERE s.id = $1
     `
     const sessionResult = await writeClient.query(selectSessionQuery, [sessionId])
+    console.log({sessionResult})
 
     if (sessionResult.rows.length === 0) {
       return c.json({ success: false, message: "Invalid session" }, 404)

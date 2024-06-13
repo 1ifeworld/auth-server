@@ -224,32 +224,32 @@ app.post("/generateEncryptKeysAndSessionId", async (c) => {
 
 app.post("/signMessageWithSession", async (c) => {
   try {
-    const { id, message } = await c.req.json()
+    const { sessionId, message } = await c.req.json()
 
-    if (!id || !message) {
+    if (!sessionId || !message) {
       return c.json({ success: false, message: "Missing parameters" }, 400)
     }
 
     // Retrieve the session and associated user
     const selectSessionQuery = `
-      SELECT s.userId, u.recovery FROM public.sessions s
-      JOIN public.users u ON s.userId = u.id
+      SELECT s.userid, u.recovery FROM public.sessions s
+      JOIN public.users u ON s.userid = u.id
       WHERE s.id = $1
     `
-    const sessionResult = await writeClient.query(selectSessionQuery, [id])
+    const sessionResult = await writeClient.query(selectSessionQuery, [sessionId])
 
     if (sessionResult.rows.length === 0) {
       return c.json({ success: false, message: "Invalid session" }, 404)
     }
 
-    const { userId } = sessionResult.rows[0]
+    const { userid } = sessionResult.rows[0]
 
     // Retrieve the stored encrypted keys
     const selectKeysQuery = `
       SELECT encryptedprivatekey FROM public.hashes
-      WHERE userId = $1
+      WHERE userid = $1
     `
-    const keysResult = await writeClient.query(selectKeysQuery, [userId])
+    const keysResult = await writeClient.query(selectKeysQuery, [userid])
 
     if (keysResult.rows.length === 0) {
       return c.json({ success: false, message: "Keys not found" }, 404)

@@ -382,6 +382,7 @@ app.use(csrf())
 const MESSAGE = 'NADA' // placeholder message
 
 app.use("*", async (c, next) => {
+  console.log("YO WERE HERE")
   const id = getCookie(c, lucia.sessionCookieName) ?? null
   if (!id) {
     c.set("user", null)

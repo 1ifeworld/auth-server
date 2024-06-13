@@ -377,7 +377,7 @@ import { writeClient } from './watcher'
 // verifyRequestOrigin(origin, ["https://www.river.ph/*"])
 
 // // cross site request forgery helper
-// app.use(csrf())
+app.use(csrf())
 
 const MESSAGE = 'NADA' // placeholder message
 

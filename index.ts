@@ -381,31 +381,31 @@ app.use(csrf())
 
 const MESSAGE = 'NADA' // placeholder message
 
-app.use("*", async (c, next) => {
-  console.log("YO WERE HERE")
-  const id = getCookie(c, lucia.sessionCookieName) ?? null
-  if (!id) {
-    c.set("user", null)
-    c.set("session", null)
-    return next()
-  }
-  console.log("session chexx")
-  const { session, user } = await lucia.validateSession(id)
-  console.log("sessionpost")
-  if (session && session.fresh) {
-    c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
-      append: true,
-    })
-  }
-  if (!session) {
-    c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
-      append: true,
-    })
-  }
-  c.set("user", user)
-  c.set("session", session)
-  return next()
-})
+// app.use("*", async (c, next) => {
+//   console.log("YO WERE HERE")
+//   const id = getCookie(c, lucia.sessionCookieName) ?? null
+//   if (!id) {
+//     c.set("user", null)
+//     c.set("session", null)
+//     return next()
+//   }
+//   console.log("session chexx")
+//   const { session, user } = await lucia.validateSession(id)
+//   console.log("sessionpost")
+//   if (session && session.fresh) {
+//     c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
+//       append: true,
+//     })
+//   }
+//   if (!session) {
+//     c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
+//       append: true,
+//     })
+//   }
+//   c.set("user", user)
+//   c.set("session", session)
+//   return next()
+// })
 
 app.get('/', async (c) => {
   const user = c.get('user')
@@ -449,121 +449,121 @@ app.post('/signMessage', async (c) => {
   }
 })
 
-app.post('/generateEncryptKeysAndSessionId', async (c) => {
-  console.log('IN ENCRYPT ROUTE')
-  try {
-    const { message, signedMessage, deviceId } = await c.req.json()
+// app.post('/generateEncryptKeysAndSessionId', async (c) => {
+//   console.log('IN ENCRYPT ROUTE')
+//   try {
+//     const { message, signedMessage, deviceId } = await c.req.json()
 
-    if (!message || !signedMessage || !deviceId) {
-      return c.json({ success: false, message: 'Missing parameters' }, 400)
-    }
+//     if (!message || !signedMessage || !deviceId) {
+//       return c.json({ success: false, message: 'Missing parameters' }, 400)
+//     }
 
-    // Verify the signed message
-    const isValid = verifyMessage(
-      message,
-      signedMessage,
-      Buffer.from(publicKey).toString('hex'),
-    )
-    if (!isValid) {
-      return c.json({ success: false, message: 'Invalid signature' }, 400)
-    }
+//     // Verify the signed message
+//     const isValid = verifyMessage(
+//       message,
+//       signedMessage,
+//       Buffer.from(publicKey).toString('hex'),
+//     )
+//     if (!isValid) {
+//       return c.json({ success: false, message: 'Invalid signature' }, 400)
+//     }
 
-    console.log({ isValid })
+//     console.log({ isValid })
 
-    const publicKeyHex = Buffer.from(publicKey).toString('hex')
+//     const publicKeyHex = Buffer.from(publicKey).toString('hex')
 
-    // Check if a custody address exists in the hashes table
-    const selectHashQuery = `
-      SELECT userid FROM public.hashes
-      WHERE custodyAddress = $1
-    `
-    const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
+//     // Check if a custody address exists in the hashes table
+//     const selectHashQuery = `
+//       SELECT userid FROM public.hashes
+//       WHERE custodyAddress = $1
+//     `
+//     const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
 
-    console.log({ hashResult })
-    const userId = generateRandomInteger(100)
-    let sessionId
+//     console.log({ hashResult })
+//     const userId = generateRandomInteger(100)
+//     let sessionId
 
-    if (hashResult.rows.length === 0) {
-      console.log('first time user!')
-      // First-time user - generate keys, encrypt, and store them
-      const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
-      const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
+//     if (hashResult.rows.length === 0) {
+//       console.log('first time user!')
+//       // First-time user - generate keys, encrypt, and store them
+//       const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
+//       const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
 
-      const encryptedPrivateKey = await kms
-        .encrypt({
-          KeyId: KEY_REF,
-          Plaintext: Buffer.from(eddsaPrivateKey),
-        })
-        .promise()
+//       const encryptedPrivateKey = await kms
+//         .encrypt({
+//           KeyId: KEY_REF,
+//           Plaintext: Buffer.from(eddsaPrivateKey),
+//         })
+//         .promise()
 
-      const encryptedPublicKey = await kms
-        .encrypt({
-          KeyId: KEY_REF,
-          Plaintext: Buffer.from(eddsaPublicKey),
-        })
-        .promise()
+//       const encryptedPublicKey = await kms
+//         .encrypt({
+//           KeyId: KEY_REF,
+//           Plaintext: Buffer.from(eddsaPublicKey),
+//         })
+//         .promise()
 
-      if (
-        !encryptedPrivateKey.CiphertextBlob ||
-        !encryptedPublicKey.CiphertextBlob
-      ) {
-        throw new Error('Encryption failed')
-      }
+//       if (
+//         !encryptedPrivateKey.CiphertextBlob ||
+//         !encryptedPublicKey.CiphertextBlob
+//       ) {
+//         throw new Error('Encryption failed')
+//       }
 
-      // Store the encrypted keys
-      console.log('prestorekeys')
-      const insertKeysQuery = `
-        INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
-        VALUES ($1, $2, $3, $4, $5)
-      `
+//       // Store the encrypted keys
+//       console.log('prestorekeys')
+//       const insertKeysQuery = `
+//         INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
+//         VALUES ($1, $2, $3, $4, $5)
+//       `
 
-      await writeClient.query(insertKeysQuery, [
-        userId,
-        publicKeyHex,
-        deviceId,
-        encryptedPrivateKey.CiphertextBlob.toString('base64'),
-        encryptedPublicKey.CiphertextBlob.toString('base64'),
-      ])
+//       await writeClient.query(insertKeysQuery, [
+//         userId,
+//         publicKeyHex,
+//         deviceId,
+//         encryptedPrivateKey.CiphertextBlob.toString('base64'),
+//         encryptedPublicKey.CiphertextBlob.toString('base64'),
+//       ])
 
-      const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
+//       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
 
-      // Create a session with Lucia
-      // const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
-      const session = {id: "hi"}
+//       // Create a session with Lucia
+//       // const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
+//       const session = {id: "hi"}
 
-      sessionId = session.id
-    } else {
-      console.log('returning user!')
-      // Returning user - update session
-      const userId = hashResult.rows[0].userid
+//       sessionId = session.id
+//     } else {
+//       console.log('returning user!')
+//       // Returning user - update session
+//       const userId = hashResult.rows[0].userid
 
-      const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
-      // const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
-      const session = {id: "hi"}
-      sessionId = session.id
+//       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
+//       // const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
+//       const session = {id: "hi"}
+//       sessionId = session.id
 
-      console.log({ userId, sessionId })
-    }
+//       console.log({ userId, sessionId })
+//     }
 
-    // // Create session cookie
-    // const sessionCookie = lucia.createSessionCookie(sessionId)
-    // console.log({sessionCookie})
+//     // // Create session cookie
+//     // const sessionCookie = lucia.createSessionCookie(sessionId)
+//     // console.log({sessionCookie})
 
-    // c.header("Set-Cookie", sessionCookie.serialize(), { append: true })
+//     // c.header("Set-Cookie", sessionCookie.serialize(), { append: true })
 
-    return c.json({
-      success: true,
-      userId,
-      sessionId,
-    })
-  } catch (error: unknown) {
-    let errorMessage = 'An unknown error occurred'
-    if (error instanceof Error) {
-      errorMessage = error.message
-    }
-    return c.json({ success: false, message: errorMessage }, 500)
-  }
-})
+//     return c.json({
+//       success: true,
+//       userId,
+//       sessionId,
+//     })
+//   } catch (error: unknown) {
+//     let errorMessage = 'An unknown error occurred'
+//     if (error instanceof Error) {
+//       errorMessage = error.message
+//     }
+//     return c.json({ success: false, message: errorMessage }, 500)
+//   }
+// })
 
 app.post('/signMessageWithSession', async (c) => {
   try {

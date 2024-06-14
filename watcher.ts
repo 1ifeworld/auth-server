@@ -119,6 +119,7 @@ async function checkAndReplicateData() {
         [
           queryResult.rows.map((row) => row.userid),
           queryResult.rows.map((row) => row.to),
+          queryResult.rows.map((row) => row.recovery),
           queryResult.rows.map((row) => new Date(row.timestamp * 1000)),
           queryResult.rows.map((row) => row.log_addr),
           queryResult.rows.map((row) => row.block_num),

@@ -47,7 +47,7 @@ async function ensureTablesExist() {
     // Create users table
     await writeClient.query(`
       CREATE TABLE IF NOT EXISTS public.users (
-        userid SERIAL PRIMARY KEY,
+        userid TEXT PRIMARY KEY,
         "to" BYTEA,
         recovery TEXT,
         timestamp TIMESTAMP,

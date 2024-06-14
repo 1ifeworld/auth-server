@@ -370,44 +370,9 @@ import { generateRandomInteger, generateRandomString } from 'oslo/crypto'
 import { kms } from './aws'
 import { app } from './hono'
 import { KEY_REF, publicKey } from './keys'
-// import { lucia } from './sessions'
+import { lucia } from './sessions'
 import { signMessage, signMessageWithKey, verifyMessage } from './signatures'
 import { writeClient } from './watcher'
-import { type DatabaseSessionAttributes, Lucia, TimeSpan } from 'lucia'
-import { adapter } from './db'
-
-export const lucia = new Lucia(adapter, {
-  sessionExpiresIn: new TimeSpan(2, 'w'),
-})
-
-declare module 'lucia' {
-  interface Register {
-    Lucia: typeof lucia
-    DatabaseSessionAttributes: DatabaseSessionAttributes
-  }
-  interface DatabaseSessionAttributes {
-    userId: string
-    expiresAt: Date
-    deviceId: string
-  }
-}
-
-export interface SessionAttributes extends DatabaseSessionAttributes {
-  created?: Date
-  id?: string
-}
-
-// Placeholder userId
-const userId = 'exampleUserId'
-const deviceId = 'exampleDeviceId' // Placeholder deviceId
-
-export const attributes: SessionAttributes = {
-  userId: userId,
-  expiresAt: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
-  created: new Date(),
-  id: 'exampleSessionData',
-  deviceId: deviceId,
-}
 
 
 // verifyRequestOrigin(origin, ["https://www.river.ph/*"])

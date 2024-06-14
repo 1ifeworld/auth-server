@@ -7,5 +7,3 @@ export const app = new Hono<{
     session: Session | null
   }
 }>()
-
-console.log({app})

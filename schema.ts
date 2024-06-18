@@ -2,7 +2,7 @@ import { numeric, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
 // Define the users table
 export const usersTable = pgTable('users', {
-  id: numeric('userId').primaryKey(),
+  id: numeric('userid').primaryKey(),
   to: text('to'),
   recovery: text('recovery'),
   timestamp: timestamp('timestamp'),
@@ -16,7 +16,7 @@ export type SelectUser = typeof usersTable.$inferSelect
 // Define the sessions table with the required columns
 export const sessionsTable = pgTable('sessions', {
   id: text('id').primaryKey(),
-  userId: numeric('userId')
+  userId: numeric('userid')
     .notNull()
     .references(() => usersTable.id),
   deviceid: text('deviceid').notNull(),

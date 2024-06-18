@@ -450,11 +450,9 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
   try {
     const { message, signedMessage } = await c.req.json()
 
-    if (!message || !signedMessage ) {
+    if (!message || !signedMessage) {
       return c.json({ success: false, message: 'Missing parameters' }, 400)
     }
-
-    // Verify the signed message
     const isValid = verifyMessage(
       message,
       signedMessage,
@@ -468,7 +466,6 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
 
     const publicKeyHex = Buffer.from(publicKey).toString('hex')
 
-    // Check if a custody address exists in the hashes table
     const selectHashQuery = `
       SELECT userid FROM public.hashes
       WHERE custodyAddress = $1
@@ -477,12 +474,11 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
 
     console.log({ hashResult })
     const userId = generateRandomInteger(100)
-    const deviceId = generateRandomString(10,alphabet('a-z', 'A-Z', '0-9', '-', '_'))
+    const deviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
     let sessionId
 
     if (hashResult.rows.length === 0) {
       console.log('first time user!')
-      // First-time user - generate keys, encrypt, and store them
       const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
       const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
 
@@ -507,8 +503,7 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
         throw new Error('Encryption failed')
       }
 
-      // Store the encrypted keys
-      console.log('prestorekeys')
+      console.log('prestorekeys', { userId, publicKeyHex, deviceId })
       const insertKeysQuery = `
         INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
         VALUES ($1, $2, $3, $4, $5)
@@ -524,7 +519,6 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
 
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
 
-      // Create a session with Lucia
       const session = await lucia.createSession(userId.toString(), {
         userId: userId,
         expiresAt,
@@ -534,7 +528,6 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       sessionId = session.id
     } else {
       console.log('returning user!')
-      // Returning user - update session
       const userId = hashResult.rows[0].userid
 
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
@@ -549,7 +542,6 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       console.log({ userId, sessionId })
     }
 
-    // Create session cookie
     const sessionCookie = lucia.createSessionCookie(sessionId)
     console.log({ sessionCookie })
 
@@ -583,13 +575,14 @@ app.post('/signMessageWithSession', async (c) => {
     }
 
     const userId = user.userId
+    console.log({ userId }) 
 
-    // Retrieve the stored encrypted keys
     const selectKeysQuery = `
       SELECT encryptedprivatekey FROM public.hashes
       WHERE userid = $1
     `
     const keysResult = await writeClient.query(selectKeysQuery, [userId])
+    console.log({ keysResult }) 
 
     if (keysResult.rows.length === 0) {
       return c.json({ success: false, message: 'Keys not found' }, 404)
@@ -597,7 +590,6 @@ app.post('/signMessageWithSession', async (c) => {
 
     const { encryptedprivatekey } = keysResult.rows[0]
 
-    // Decrypt the private key using AWS KMS
     const decryptedPrivateKey = await kms
       .decrypt({
         CiphertextBlob: Buffer.from(encryptedprivatekey, 'base64'),
@@ -608,13 +600,11 @@ app.post('/signMessageWithSession', async (c) => {
       throw new Error('Decryption failed')
     }
 
-    // Sign the message with the decrypted EDDSA private key
     const eddsaPrivateKey = new Uint8Array(
       decryptedPrivateKey.Plaintext as ArrayBuffer,
     )
     const signedMessage = signMessageWithKey(message, eddsaPrivateKey)
 
-    // Re-encrypt the private key using AWS KMS
     const reEncryptedPrivateKey = await kms
       .encrypt({
         KeyId: KEY_REF,

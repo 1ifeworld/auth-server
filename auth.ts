@@ -69,7 +69,7 @@ declare module 'lucia' {
 const deviceId = generateRandomString(10,alphabet('a-z', 'A-Z', '0-9', '-', '_'))
 
 export const sessionAttributes: SessionAttributes = {
-  userId: 0, // Placeholder, will be set dynamically
+  userId: 0,
   expiresAt: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
   deviceId: deviceId,
 }

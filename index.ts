@@ -206,8 +206,6 @@
 //   }
 // })
 
-
-
 // app.post('/signMessageWithSession', async (c) => {
 //   try {
 //     const { sessionId, message } = await c.req.json()
@@ -357,8 +355,6 @@
 //   `Hono server started on http://localhost:${process.env.PORT || 3030}`,
 // )
 
-
-
 import { ed25519 } from '@noble/curves/ed25519'
 import { blake3 } from '@noble/hashes/blake3'
 import { randomBytes } from '@noble/hashes/utils'
@@ -367,13 +363,12 @@ import { getCookie } from 'hono/cookie'
 import { csrf } from 'hono/csrf'
 import { verifyRequestOrigin } from 'lucia'
 import { generateRandomInteger, generateRandomString } from 'oslo/crypto'
+import { lucia } from './auth'
 import { kms } from './aws'
 import { app } from './hono'
 import { KEY_REF, publicKey } from './keys'
-import { lucia } from './sessions'
 import { signMessage, signMessageWithKey, verifyMessage } from './signatures'
 import { writeClient } from './watcher'
-
 
 // verifyRequestOrigin(origin, ["https://www.river.ph/*"])
 
@@ -382,31 +377,31 @@ app.use(csrf())
 
 const MESSAGE = 'NADA' // placeholder message
 
-// app.use("*", async (c, next) => {
-//   console.log("YO WERE HERE")
-//   const id = getCookie(c, lucia.sessionCookieName) ?? null
-//   if (!id) {
-//     c.set("user", null)
-//     c.set("session", null)
-//     return next()
-//   }
-//   console.log("session chexx")
-//   const { session, user } = await lucia.validateSession(id)
-//   console.log("sessionpost")
-//   if (session && session.fresh) {
-//     c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
-//       append: true,
-//     })
-//   }
-//   if (!session) {
-//     c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
-//       append: true,
-//     })
-//   }
-//   c.set("user", user)
-//   c.set("session", session)
-//   return next()
-// })
+app.use('*', async (c, next) => {
+  console.log('YO WERE HERE')
+  const id = getCookie(c, lucia.sessionCookieName) ?? null
+  if (!id) {
+    c.set('user', null)
+    c.set('session', null)
+    return next()
+  }
+  console.log('session chexx')
+  const { session, user } = await lucia.validateSession(id)
+  console.log('sessionpost')
+  if (session && session.fresh) {
+    c.header('Set-Cookie', lucia.createSessionCookie(session.id).serialize(), {
+      append: true,
+    })
+  }
+  if (!session) {
+    c.header('Set-Cookie', lucia.createBlankSessionCookie().serialize(), {
+      append: true,
+    })
+  }
+  c.set('user', user)
+  c.set('session', session)
+  return next()
+})
 
 app.get('/', async (c) => {
   const user = c.get('user')
@@ -529,7 +524,11 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
 
       // Create a session with Lucia
-      const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
+      const session = await lucia.createSession(userId.toString(), {
+        userId: userId,
+        expiresAt,
+        deviceId,
+      })
 
       sessionId = session.id
     } else {
@@ -538,7 +537,11 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       const userId = hashResult.rows[0].userid
 
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
-      const session = await lucia.createSession(userId.toString(), { userId: userId.toString(), expiresAt, deviceId })
+      const session = await lucia.createSession(userId.toString(), {
+        userId: userId.toString(),
+        expiresAt,
+        deviceId,
+      })
 
       sessionId = session.id
 
@@ -547,9 +550,9 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
 
     // Create session cookie
     const sessionCookie = lucia.createSessionCookie(sessionId)
-    console.log({sessionCookie})
+    console.log({ sessionCookie })
 
-    c.header("Set-Cookie", sessionCookie.serialize(), { append: true })
+    c.header('Set-Cookie', sessionCookie.serialize(), { append: true })
 
     return c.json({
       success: true,
@@ -637,10 +640,10 @@ app.post('/signMessageWithSession', async (c) => {
     SET encryptedprivatekey = $1
     WHERE userid = $2
   `
-  await writeClient.query(updateKeysQuery, [
-    reEncryptedPrivateKey.CiphertextBlob.toString('base64'),
-    userid,
-  ])
+    await writeClient.query(updateKeysQuery, [
+      reEncryptedPrivateKey.CiphertextBlob.toString('base64'),
+      userid,
+    ])
 
     return c.json({
       success: true,

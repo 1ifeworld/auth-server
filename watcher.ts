@@ -3,7 +3,7 @@ import { app } from './hono'
 
 const { Client } = pg
 
-console.log("YO WATCHER")
+console.log('YO WATCHER')
 
 const listenConnectionString = process.env.LISTEN_DATABASE_URL!
 const writeConnectionString = process.env.WRITE_DATABASE_URL!
@@ -23,7 +23,7 @@ listenClient
     console.error('Connection error with Source DB:', (err as Error).stack),
   )
 
-  console.log({listenClient})
+console.log({ listenClient })
 
 writeClient
   .connect()
@@ -38,7 +38,7 @@ writeClient
     ),
   )
 
-  console.log({writeClient})
+console.log({ writeClient })
 
 async function ensureTablesExist() {
   try {
@@ -135,7 +135,7 @@ async function checkAndReplicateData() {
 setInterval(checkAndReplicateData, 1000)
 
 process.on('SIGINT', () => {
-  console.log("yo sigint")
+  console.log('yo sigint')
   Promise.all([listenClient.end(), writeClient.end()])
     .then(() => {
       console.log('Both clients disconnected')
@@ -151,9 +151,8 @@ Bun.serve({
   port: process.env.PORT || 3030,
 })
 
-console.log("served")
+console.log('served')
 
 console.log(
   `Hono server started on http://localhost:${process.env.PORT || 3030}`,
 )
-

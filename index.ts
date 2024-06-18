@@ -217,20 +217,27 @@ app.post('/signMessageWithSession', async (c) => {
       return c.json({ success: false, message: 'Missing parameters' }, 400)
     }
 
-    const { session, user } = await lucia.validateSession(sessionId)
-    if (!session) {
+    const selectSessionQuery = `
+      SELECT userid FROM public.sessions
+      WHERE id = $1
+    `
+    const sessionResult = await writeClient.query(selectSessionQuery, [
+      sessionId,
+    ])
+    console.log({ sessionResult })
+
+    if (sessionResult.rows.length === 0) {
       return c.json({ success: false, message: 'Invalid session' }, 404)
     }
 
-    const userId = user.userId
-    console.log({ userId }) 
+    const { userid } = sessionResult.rows[0]
 
+    // Retrieve the stored encrypted keys
     const selectKeysQuery = `
       SELECT encryptedprivatekey FROM public.hashes
       WHERE userid = $1
     `
-    const keysResult = await writeClient.query(selectKeysQuery, [userId])
-    console.log({ keysResult }) 
+    const keysResult = await writeClient.query(selectKeysQuery, [userid])
 
     if (keysResult.rows.length === 0) {
       return c.json({ success: false, message: 'Keys not found' }, 404)
@@ -238,6 +245,7 @@ app.post('/signMessageWithSession', async (c) => {
 
     const { encryptedprivatekey } = keysResult.rows[0]
 
+    // Decrypt the private key using AWS KMS
     const decryptedPrivateKey = await kms
       .decrypt({
         CiphertextBlob: Buffer.from(encryptedprivatekey, 'base64'),
@@ -248,11 +256,13 @@ app.post('/signMessageWithSession', async (c) => {
       throw new Error('Decryption failed')
     }
 
+    // Sign the message with the decrypted EDDSA private key
     const eddsaPrivateKey = new Uint8Array(
       decryptedPrivateKey.Plaintext as ArrayBuffer,
     )
     const signedMessage = signMessageWithKey(message, eddsaPrivateKey)
 
+    // Re-encrypt the private key using AWS KMS
     const reEncryptedPrivateKey = await kms
       .encrypt({
         KeyId: KEY_REF,
@@ -271,7 +281,7 @@ app.post('/signMessageWithSession', async (c) => {
     `
     await writeClient.query(updateKeysQuery, [
       reEncryptedPrivateKey.CiphertextBlob.toString('base64'),
-      userId,
+      userid,
     ])
 
     return c.json({

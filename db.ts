@@ -2,11 +2,9 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { Client } from 'pg'
 
 const pool = new Client({
-  connectionString: process.env.DATABASE_URL!,
+  connectionString: process.env.WRITE_DATABASE_URL!,
 })
 
-const connected = await pool.connect()
-console.log({ connected })
+await pool.connect()
 
 export const db = drizzle(pool)
-console.log({ db })

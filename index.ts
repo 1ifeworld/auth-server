@@ -362,7 +362,7 @@ import { origin } from 'bun'
 import { getCookie } from 'hono/cookie'
 import { csrf } from 'hono/csrf'
 import { verifyRequestOrigin } from 'lucia'
-import { generateRandomInteger, generateRandomString } from 'oslo/crypto'
+import { generateRandomInteger, generateRandomString, alphabet} from 'oslo/crypto'
 import { lucia } from './auth'
 import { kms } from './aws'
 import { app } from './hono'
@@ -410,7 +410,7 @@ app.get('/', async (c) => {
   }
 })
 
-type SignatureResponse = { sig: string; signer: string }
+type SignatureResponse = { sig: string, signer: string }
 
 function isSignatureResponse(data: any): data is SignatureResponse {
   return (
@@ -448,9 +448,9 @@ app.post('/signMessage', async (c) => {
 app.post('/generateEncryptKeysAndSessionId', async (c) => {
   console.log('IN ENCRYPT ROUTE')
   try {
-    const { message, signedMessage, deviceId } = await c.req.json()
+    const { message, signedMessage } = await c.req.json()
 
-    if (!message || !signedMessage || !deviceId) {
+    if (!message || !signedMessage ) {
       return c.json({ success: false, message: 'Missing parameters' }, 400)
     }
 
@@ -477,6 +477,7 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
 
     console.log({ hashResult })
     const userId = generateRandomInteger(100)
+    const deviceId = generateRandomString(10,alphabet('a-z', 'A-Z', '0-9', '-', '_'))
     let sessionId
 
     if (hashResult.rows.length === 0) {
@@ -576,29 +577,19 @@ app.post('/signMessageWithSession', async (c) => {
       return c.json({ success: false, message: 'Missing parameters' }, 400)
     }
 
-    // Retrieve the session and associated user
-    const selectSessionQuery = `
-      SELECT s.userid, h.custodyAddress FROM public.sessions s
-      JOIN public.hashes h ON s.userid = h.userid
-      WHERE s.id = $1
-    `
-    const sessionResult = await writeClient.query(selectSessionQuery, [
-      sessionId,
-    ])
-    console.log({ sessionResult })
-
-    if (sessionResult.rows.length === 0) {
+    const { session, user } = await lucia.validateSession(sessionId)
+    if (!session) {
       return c.json({ success: false, message: 'Invalid session' }, 404)
     }
 
-    const { userid } = sessionResult.rows[0]
+    const userId = user.userId
 
     // Retrieve the stored encrypted keys
     const selectKeysQuery = `
       SELECT encryptedprivatekey FROM public.hashes
       WHERE userid = $1
     `
-    const keysResult = await writeClient.query(selectKeysQuery, [userid])
+    const keysResult = await writeClient.query(selectKeysQuery, [userId])
 
     if (keysResult.rows.length === 0) {
       return c.json({ success: false, message: 'Keys not found' }, 404)
@@ -636,13 +627,13 @@ app.post('/signMessageWithSession', async (c) => {
     }
 
     const updateKeysQuery = `
-    UPDATE public.hashes
-    SET encryptedprivatekey = $1
-    WHERE userid = $2
-  `
+      UPDATE public.hashes
+      SET encryptedprivatekey = $1
+      WHERE userid = $2
+    `
     await writeClient.query(updateKeysQuery, [
       reEncryptedPrivateKey.CiphertextBlob.toString('base64'),
-      userid,
+      userId,
     ])
 
     return c.json({
@@ -657,6 +648,7 @@ app.post('/signMessageWithSession', async (c) => {
     return c.json({ success: false, message: errorMessage }, 500)
   }
 })
+
 
 app.get('/submitToChannel', async (c) => {
   try {

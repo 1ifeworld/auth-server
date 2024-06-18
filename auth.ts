@@ -66,19 +66,18 @@ declare module 'lucia' {
   }
 }
 
-const userId = await getUserId(1)
-const deviceId = generateRandomString(
-  10,
-  alphabet('a-z', 'A-Z', '0-9', '-', '_'),
-)
+const deviceId = generateRandomString(10,alphabet('a-z', 'A-Z', '0-9', '-', '_'))
 
 export const sessionAttributes: SessionAttributes = {
-  userId: userId,
+  userId: 0, // Placeholder, will be set dynamically
   expiresAt: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
   deviceId: deviceId,
 }
 
-async function createAndValidateSession() {
+async function createAndValidateSession(sessionId: string) {
+  const userId = await getUserId(sessionId)
+  sessionAttributes.userId = userId
+
   const session = await lucia.createSession(
     userId.toString(),
     sessionAttributes,
@@ -95,7 +94,7 @@ async function createAndValidateSession() {
   return { validatedSession, user, headers }
 }
 
-createAndValidateSession().then(({ validatedSession, user, headers }) => {
+createAndValidateSession('initialSessionId').then(({ validatedSession, user, headers }) => {
   console.log('Validated Session:', validatedSession)
   console.log('User:', user)
   console.log('Set-Cookie header:', headers.get('Set-Cookie'))

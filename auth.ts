@@ -72,7 +72,7 @@ declare module 'lucia' {
 export const sessionAttributes: SessionAttributes = {
   userId: 0,
   expiresAt: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
-  deviceId: '', 
+  deviceId: getDeviceId(custodyAddress).toString(), 
 }
 
 async function createAndValidateSession(sessionId: string) {
@@ -80,6 +80,7 @@ async function createAndValidateSession(sessionId: string) {
   sessionAttributes.userId = userId
 
     const deviceId = await getDeviceId(custodyAddress).catch(() => custodyAddress)
+    console.log("YOOOOOO", deviceId)
     sessionAttributes.deviceId = deviceId
 
   const session = await lucia.createSession(

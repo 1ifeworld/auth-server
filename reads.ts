@@ -18,15 +18,15 @@ export async function getUserId(sessionId: string): Promise<number> {
   }
 }
 
-export async function getDeviceId(deviceId: string): Promise<string> {
+export async function getDeviceId(custodyAddress: string): Promise<string> {
   const result = await db
     .select({ deviceId: dbSchema.hashesTable.deviceid })
     .from(dbSchema.hashesTable)
-    .where(sql`${dbSchema.hashesTable.deviceid} = ${deviceId}`)
+    .where(sql`${dbSchema.hashesTable.custodyAddress} = ${custodyAddress}`)
     .limit(1)
     .execute()
   if (result.length > 0) {
-    console.log(`deviceId for session ${deviceId}:`, result[0].deviceId) 
+    console.log(`deviceId for session ${custodyAddress}:`, result[0].deviceId) 
     return result[0].deviceId
   } else {
     throw new Error('No deviceId found')

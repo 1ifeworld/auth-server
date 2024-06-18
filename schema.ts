@@ -21,8 +21,7 @@ export const sessionsTable = pgTable('sessions', {
     .references(() => usersTable.id),
   deviceid: text('deviceid').notNull(),
   created: timestamp('created'),
-  expiration: timestamp('expiration').notNull(),
-  expiresAt: timestamp('expiresAt').notNull(),
+  expiresAt: timestamp('expiresat').notNull(),
 })
 
 export type InsertSession = typeof sessionsTable.$inferInsert

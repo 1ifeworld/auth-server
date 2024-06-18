@@ -7,7 +7,7 @@ import type {
 } from 'lucia'
 import { alphabet, generateRandomString } from 'oslo/crypto'
 import { db } from './db'
-import { getUserId } from './reads'
+import { getUserId, getDeviceId } from './reads'
 import * as dbSchema from './schema'
 
 export interface UserAttributes {
@@ -66,12 +66,12 @@ declare module 'lucia' {
   }
 }
 
-const deviceId = generateRandomString(10,alphabet('a-z', 'A-Z', '0-9', '-', '_'))
+const deviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
 
 export const sessionAttributes: SessionAttributes = {
   userId: 0,
   expiresAt: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
-  deviceId: deviceId,
+  deviceId: await getDeviceId(deviceId).catch(() => deviceId), 
 }
 
 async function createAndValidateSession(sessionId: string) {

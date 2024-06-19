@@ -1,15 +1,11 @@
 import { DrizzlePostgreSQLAdapter } from '@lucia-auth/adapter-drizzle'
-import { randomBytes } from '@noble/hashes/utils'
 import { Lucia, TimeSpan } from 'lucia'
 import type {
   RegisteredDatabaseSessionAttributes,
   RegisteredDatabaseUserAttributes,
 } from 'lucia'
-import { alphabet, generateRandomString } from 'oslo/crypto'
 import { db } from './db'
-import { getUserId, getDeviceId } from './reads'
 import * as dbSchema from './schema'
-import { custodyAddress } from './keys'
 
 export interface UserAttributes {
   userId: number
@@ -20,9 +16,9 @@ export interface UserAttributes {
 
 export interface SessionAttributes {
   userId: number
-  expiresAt: Date
-  created: Date
   deviceId: string
+  created: Date
+  expiresAt: Date
 }
 
 const adapter = new DrizzlePostgreSQLAdapter(
@@ -44,9 +40,9 @@ export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
   ): SessionAttributes {
     return {
       userId: databaseSessionAttributes.userId,
-      expiresAt: new Date(databaseSessionAttributes.expiresAt),
-      created: new Date(databaseSessionAttributes.created),
       deviceId: databaseSessionAttributes.deviceId,
+      created: new Date(databaseSessionAttributes.created),
+      expiresAt: new Date(databaseSessionAttributes.expiresAt),
     }
   },
   getUserAttributes(
@@ -61,20 +57,19 @@ export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
   },
 })
 
-export const sessionAttributes: SessionAttributes = {
-  userId: 0,
-  expiresAt: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
-  created: new Date(Date.now()),
-  deviceId: 'yo', 
-}
-
-
 declare module 'lucia' {
   interface Register {
     Lucia: typeof lucia
     DatabaseUserAttributes: UserAttributes
     DatabaseSessionAttributes: SessionAttributes
   }
+  interface DatabaseSessionAttributes {
+    userId: number
+    deviceId: string
+    expiresAt: Date
+    created: Date
+  }
+
 }
 
 // const generateDeviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))

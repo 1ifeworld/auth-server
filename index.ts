@@ -169,12 +169,13 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
 
       const session = await lucia.createSession(userId.toString(), {
         userId: userId,
-        deviceId,
+        deviceId: deviceId,
         expiresAt,
         created
       })
 
       sessionId = session.id
+      console.log({session})
       console.log("deviceee", session.deviceId)
 
       
@@ -190,8 +191,8 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       const created = new Date(Date.now())
 
       const session = await lucia.createSession(userId.toString(), {
-        userId: userId.toString(),
-        deviceId,
+        userId: userId,
+        deviceId: deviceId,
         expiresAt,
         created,
       })

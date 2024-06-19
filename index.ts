@@ -187,6 +187,8 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       })
 
       sessionId = session.id
+      deviceId = session.deviceId
+      console.log("wtf", deviceId)
       
     } else {
       console.log('returning user!')

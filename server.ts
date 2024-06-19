@@ -4,6 +4,7 @@ import { csrf } from 'hono/csrf'
 import type { Session, User } from 'lucia'
 import { lucia } from './lucia/auth'
 import { routes } from './routes'
+import { cache } from 'hono/cache'
 
 export const app = new Hono<{
   Variables: {

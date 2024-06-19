@@ -19,7 +19,9 @@ export const sessionsTable = pgTable('sessions', {
   userId: numeric('userid')
     .notNull()
     .references(() => usersTable.id),
-  deviceid: text('deviceid').notNull(),
+  deviceid: text('deviceid')
+  .notNull()
+  .references(() => hashesTable.deviceid),
   created: timestamp('created'),
   expiresAt: timestamp('expiresat').notNull(),
 })

@@ -1,9 +1,8 @@
 import { app } from './server'
-import { serve } from 'bun'
 
 console.log("initialized here: index")
 
-serve({
+Bun.serve({
   fetch: app.fetch,
   port: process.env.PORT || 3030,
 })

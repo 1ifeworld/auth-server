@@ -1,9 +1,5 @@
-// src/routes/signMessageRoutes.ts
-
-import { Hono } from 'hono'
 import { signMessage } from '../lib/signatures'
-
-export const signMessageRoute = new Hono()
+import { app } from '../server'
 
 type SignatureResponse = { sig: string; signer: string }
 
@@ -16,7 +12,7 @@ function isSignatureResponse(data: any): data is SignatureResponse {
   )
 }
 
-signMessageRoute.post('/sign', async (c) => {
+app.post('/sign', async (c) => {
   try {
     const { message } = await c.req.json()
 

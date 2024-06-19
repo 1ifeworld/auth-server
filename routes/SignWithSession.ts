@@ -1,13 +1,11 @@
-import { Hono } from 'hono'
+import { app } from '../server'
 import { kms } from '../clients/aws'
 import { writeClient } from '../database/watcher'
 import { KEY_REF } from '../lib/keys'
 import { signMessageWithKey } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
 
-export const signWithSession = new Hono()
-
-signWithSession.post('/signWithSession', async (c) => {
+app.post('/signWithSession', async (c) => {
   try {
     const { sessionId, message } = await c.req.json()
 

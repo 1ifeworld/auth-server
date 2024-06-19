@@ -10,10 +10,9 @@ import { writeClient } from '../database/watcher'
 import { KEY_REF, publicKey } from '../lib/keys'
 import { verifyMessage } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
+import { app } from '../server'
 
-export const generateEncryptKeysAndSessionId = new Hono()
-
-generateEncryptKeysAndSessionId.post(
+app.post(
   '/genKeys',
   async (c) => {
     console.log('IN ENCRYPT ROUTE')

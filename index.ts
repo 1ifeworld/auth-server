@@ -217,6 +217,12 @@ app.post('/signMessageWithSession', async (c) => {
       return c.json({ success: false, message: 'Missing parameters' }, 400)
     }
 
+    const { session, user } = await lucia.validateSession(sessionId)
+    
+    if (!session) {
+      return c.json({ success: false, message: 'Invalid session' }, 404)
+    }
+
     const selectSessionQuery = `
       SELECT userid FROM public.sessions
       WHERE id = $1

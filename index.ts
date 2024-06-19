@@ -122,6 +122,7 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
     console.log({ hashResult })
     const userId = generateRandomInteger(100)
     const deviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
+
     let sessionId
 
     if (hashResult.rows.length === 0) {
@@ -175,6 +176,7 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       })
 
       sessionId = session.id
+      console.log("deviceee", session.deviceId)
 
       
     } else {

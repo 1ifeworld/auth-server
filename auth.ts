@@ -65,7 +65,7 @@ export const sessionAttributes: SessionAttributes = {
   userId: 0,
   expiresAt: new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000),
   created: new Date(Date.now()),
-  deviceId: getDeviceId(custodyAddress).toString(), 
+  deviceId: 'yo', 
 }
 
 

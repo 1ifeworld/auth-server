@@ -119,14 +119,13 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
     console.log({ hashResult })
     const userId = generateRandomInteger(100)
     let deviceId 
-
     let sessionId
 
     if (hashResult.rows.length === 0) {
       console.log('first time user!')
       const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
       const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
-      const deviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
+      deviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
 
 
       const encryptedPrivateKey = await kms

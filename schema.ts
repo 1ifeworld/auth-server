@@ -1,6 +1,5 @@
 import { numeric, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
-// Define the users table
 export const usersTable = pgTable('users', {
   id: numeric('userid').primaryKey(),
   to: text('to'),
@@ -13,15 +12,12 @@ export const usersTable = pgTable('users', {
 export type InsertUser = typeof usersTable.$inferInsert
 export type SelectUser = typeof usersTable.$inferSelect
 
-// Define the sessions table with the required columns
 export const sessionsTable = pgTable('sessions', {
   id: text('id').primaryKey(),
   userId: numeric('userid')
     .notNull()
     .references(() => usersTable.id),
-  deviceid: text('deviceid')
-  .notNull()
-  .references(() => hashesTable.deviceid),
+  deviceid: text('deviceid').notNull(),
   created: timestamp('created'),
   expiresAt: timestamp('expiresat').notNull(),
 })
@@ -29,7 +25,6 @@ export const sessionsTable = pgTable('sessions', {
 export type InsertSession = typeof sessionsTable.$inferInsert
 export type SelectSession = typeof sessionsTable.$inferSelect
 
-// Define the hashes table
 export const hashesTable = pgTable(
   'hashes',
   {

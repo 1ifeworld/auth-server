@@ -166,12 +166,22 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
         encryptedPublicKey.CiphertextBlob.toString('base64'),
       ])
 
+
+      const insertDeviceKeyQuery = `
+        INSERT INTO public.sessions (deviceid)
+        VALUES ($1)
+      `
+
+      await writeClient.query(insertDeviceKeyQuery, [
+        deviceId,
+      ])
+
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
       const created = new Date(Date.now())
 
       const session = await lucia.createSession(userId.toString(), {
-        userid: userId,
-        deviceid: deviceId,
+        userId: userId,
+        deviceId: deviceId,
         expiresAt,
         created
       })
@@ -190,8 +200,8 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       const created = new Date(Date.now())
 
       const session = await lucia.createSession(userId.toString(), {
-        userid: userId,
-        deviceid: deviceId,
+        userId: userId,
+        deviceId: deviceId,
         expiresAt,
         created,
       })

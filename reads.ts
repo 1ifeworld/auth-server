@@ -5,7 +5,7 @@ import { sql } from 'drizzle-orm'
 
 export async function getUserId(sessionId: string): Promise<number> {
   const result = await db
-    .select({ userId: dbSchema.sessionsTable.userId })
+    .select({ userId: dbSchema.sessionsTable.userid })
     .from(dbSchema.sessionsTable)
     .where(sql`${dbSchema.sessionsTable.id} = ${sessionId}`)
     .limit(1)

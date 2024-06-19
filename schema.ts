@@ -14,7 +14,7 @@ export type SelectUser = typeof usersTable.$inferSelect
 
 export const sessionsTable = pgTable('sessions', {
   id: text('id').primaryKey(),
-  userId: numeric('userid')
+  userid: numeric('userid')
     .notNull()
     .references(() => usersTable.id),
   deviceid: text('deviceid').notNull(),

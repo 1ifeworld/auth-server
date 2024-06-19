@@ -15,15 +15,15 @@ export interface UserAttributes {
 }
 
 export interface SessionAttributes {
-  userId: number
-  deviceId: string
+  userid: number
+  deviceid: string
   created: Date
   expiresAt: Date
 }
 
 interface DatabaseSessionAttributes {
-  userId: number
-  deviceId: string
+  userid: number
+  deviceid: string
   expiresAt: Date
   created: Date
 }
@@ -35,20 +35,20 @@ const adapter = new DrizzlePostgreSQLAdapter(
   dbSchema.usersTable,
 )
 
-export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
+export const lucia = new Lucia<DatabaseSessionAttributes, UserAttributes>(adapter, {
   sessionExpiresIn: new TimeSpan(2, 'w'),
   sessionCookie: {
     expires: false,
     attributes: {
-      secure: true,
+      secure: false,
     },
   },
   getSessionAttributes(
     databaseSessionAttributes: DatabaseSessionAttributes,
-  ): SessionAttributes {
+  ) {
     return {
-      userId: databaseSessionAttributes.userId,
-      deviceId: databaseSessionAttributes.deviceId,
+      userid: databaseSessionAttributes.userid,
+      deviceid: databaseSessionAttributes.deviceid,
       created: new Date(databaseSessionAttributes.created),
       expiresAt: new Date(databaseSessionAttributes.expiresAt),
     }

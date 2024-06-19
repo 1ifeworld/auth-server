@@ -36,9 +36,10 @@ app.use('*', async (c, next) => {
     })
   }
   if (!session) {
-    c.header('Set-Cookie', lucia.createBlankSessionCookie().serialize(), {
+   const blankCookies = c.header('Set-Cookie', lucia.createBlankSessionCookie().serialize(), {
       append: true,
     })
+    console.log({blankCookies})
   }
   c.set('user', user)
   c.set('session', session)

@@ -14,7 +14,7 @@ import { lucia } from '../lucia/auth'
 export const generateEncryptKeysAndSessionId = new Hono()
 
 generateEncryptKeysAndSessionId.post(
-  '/generateEncryptKeysAndSessionId',
+  '/genKeys',
   async (c) => {
     console.log('IN ENCRYPT ROUTE')
     try {

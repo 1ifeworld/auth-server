@@ -16,7 +16,7 @@ function isSignatureResponse(data: any): data is SignatureResponse {
   )
 }
 
-signMessageRoute.post('/signMessage', async (c) => {
+signMessageRoute.post('/sign', async (c) => {
   try {
     const { message } = await c.req.json()
 

@@ -165,23 +165,32 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       ])
 
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
+      const created = new Date(Date.now())
 
       const session = await lucia.createSession(userId.toString(), {
         userId: userId,
         expiresAt,
-        deviceId,
+        created,
+        deviceId
       })
 
       sessionId = session.id
+
+      
     } else {
       console.log('returning user!')
       const userId = hashResult.rows[0].userid
 
+      console.log("DEVICE ID", deviceId)
+
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
+      const created = new Date(Date.now())
+
       const session = await lucia.createSession(userId.toString(), {
         userId: userId.toString(),
         expiresAt,
-        deviceId,
+        created,
+        deviceId
       })
 
       sessionId = session.id
@@ -199,6 +208,7 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       success: true,
       userId,
       sessionId,
+      deviceId
     })
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred'
@@ -218,7 +228,9 @@ app.post('/signMessageWithSession', async (c) => {
     }
 
     const { session, user } = await lucia.validateSession(sessionId)
-    
+
+    console.log({session})
+
     if (!session) {
       return c.json({ success: false, message: 'Invalid session' }, 404)
     }

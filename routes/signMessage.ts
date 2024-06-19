@@ -1,16 +1,6 @@
 import { signMessage } from '../lib/signatures'
 import { app } from '../server'
 
-type SignatureResponse = { sig: string; signer: string }
-
-function isSignatureResponse(data: any): data is SignatureResponse {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof data.sig === 'string' &&
-    typeof data.signer === 'string'
-  )
-}
 
 app.post('/sign', async (c) => {
   try {

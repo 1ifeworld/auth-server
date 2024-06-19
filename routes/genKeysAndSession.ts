@@ -1,5 +1,4 @@
 import { ed25519 } from '@noble/curves/ed25519'
-import { Hono } from 'hono'
 import {
   alphabet,
   generateRandomInteger,

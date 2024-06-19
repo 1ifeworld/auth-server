@@ -18,7 +18,6 @@ app.use(csrf())
 const MESSAGE = 'NADA' // placeholder message
 
 app.use('*', async (c, next) => {
-  console.log('YO WERE HERE')
   const id = getCookie(c, lucia.sessionCookieName) ?? null
   console.log({id})
   if (!id) {
@@ -49,6 +48,9 @@ app.use('*', async (c, next) => {
 
 app.get('/', async (c) => {
   const user = c.get('user')
+  const session = c.get('session')
+
+  console.log("got session at main", session)
   if (!user) {
     return c.body(null, 401)
   }
@@ -230,9 +232,6 @@ app.post('/signMessageWithSession', async (c) => {
 
     const { session, user } = await lucia.validateSession(sessionId)
 
-    console.log("device ikey in validate", session?.deviceId)
-
-    console.log({session})
 
     if (!session) {
       return c.json({ success: false, message: 'Invalid session' }, 404)

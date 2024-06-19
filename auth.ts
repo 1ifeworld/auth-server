@@ -21,6 +21,14 @@ export interface SessionAttributes {
   expiresAt: Date
 }
 
+interface DatabaseSessionAttributes {
+  userId: number
+  deviceId: string
+  expiresAt: Date
+  created: Date
+}
+
+
 const adapter = new DrizzlePostgreSQLAdapter(
   db,
   dbSchema.sessionsTable,
@@ -36,7 +44,7 @@ export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
     },
   },
   getSessionAttributes(
-    databaseSessionAttributes: RegisteredDatabaseSessionAttributes,
+    databaseSessionAttributes: DatabaseSessionAttributes,
   ): SessionAttributes {
     return {
       userId: databaseSessionAttributes.userId,
@@ -63,14 +71,9 @@ declare module 'lucia' {
     DatabaseUserAttributes: UserAttributes
     DatabaseSessionAttributes: SessionAttributes
   }
-  interface DatabaseSessionAttributes {
-    userId: number
-    deviceId: string
-    expiresAt: Date
-    created: Date
-  }
-
 }
+
+
 
 // const generateDeviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
 

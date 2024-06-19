@@ -169,9 +169,9 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
 
       const session = await lucia.createSession(userId.toString(), {
         userId: userId,
+        deviceId: deviceId,
         expiresAt,
-        created,
-        deviceId
+        created
       })
 
       sessionId = session.id

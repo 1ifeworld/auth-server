@@ -7,7 +7,7 @@ import { lucia } from '../lucia/auth'
 
 export const signWithSession = new Hono()
 
-signWithSession.post('/signMessageWithSession', async (c) => {
+signWithSession.post('/signWithSession', async (c) => {
   try {
     const { sessionId, message } = await c.req.json()
 

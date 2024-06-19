@@ -1,10 +1,7 @@
 import { ed25519 } from '@noble/curves/ed25519'
 import { blake3 } from '@noble/hashes/blake3'
-import { randomBytes } from '@noble/hashes/utils'
-import { origin } from 'bun'
 import { getCookie } from 'hono/cookie'
 import { csrf } from 'hono/csrf'
-import { verifyRequestOrigin } from 'lucia'
 import { generateRandomInteger, generateRandomString, alphabet} from 'oslo/crypto'
 import { lucia } from './auth'
 import { kms } from './aws'
@@ -121,7 +118,7 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
 
     console.log({ hashResult })
     const userId = generateRandomInteger(100)
-    const deviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
+    let deviceId 
 
     let sessionId
 
@@ -129,6 +126,8 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       console.log('first time user!')
       const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
       const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
+      const deviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
+
 
       const encryptedPrivateKey = await kms
         .encrypt({
@@ -151,7 +150,8 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
         throw new Error('Encryption failed')
       }
 
-      console.log('prestorekeys', { userId, publicKeyHex, deviceId })
+      console.log('prestorekeys', { userId, publicKeyHex })
+
       const insertKeysQuery = `
         INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
         VALUES ($1, $2, $3, $4, $5)
@@ -170,7 +170,7 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
 
       const session = await lucia.createSession(userId.toString(), {
         userId: userId,
-        deviceId: deviceId,
+        deviceId,
         expiresAt,
         created
       })
@@ -182,6 +182,8 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
     } else {
       console.log('returning user!')
       const userId = hashResult.rows[0].userid
+      const deviceId = hashResult.rows[0].deviceId
+
 
       console.log("DEVICE ID", deviceId)
 
@@ -190,9 +192,9 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
 
       const session = await lucia.createSession(userId.toString(), {
         userId: userId.toString(),
+        deviceId,
         expiresAt,
         created,
-        deviceId
       })
 
       sessionId = session.id

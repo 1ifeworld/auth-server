@@ -12,9 +12,7 @@ export const app = new Hono<{
   }
 }>()
 
-// verifyRequestOrigin(origin, ["https://www.river.ph/*"])
-
-// // cross site request forgery helper
+// Cross Site Request Forgery (CSRF) protection middleware
 app.use(csrf())
 
 app.use('*', async (c, next) => {

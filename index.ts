@@ -1,5 +1,7 @@
 import { app } from './server'
 
+console.log("initialized here: index")
+
 Bun.serve({
   fetch: app.fetch,
   port: process.env.PORT || 3030,

@@ -175,9 +175,6 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       })
 
       sessionId = session.id
-      console.log({session})
-      console.log("deviceee", session.deviceId)
-
       
     } else {
       console.log('returning user!')
@@ -232,6 +229,8 @@ app.post('/signMessageWithSession', async (c) => {
     }
 
     const { session, user } = await lucia.validateSession(sessionId)
+
+    console.log("device ikey in validate", session?.deviceId)
 
     console.log({session})
 

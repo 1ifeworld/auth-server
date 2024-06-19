@@ -20,8 +20,11 @@ app.use('*', async (c, next) => {
   const id = getCookie(c, lucia.sessionCookieName) ?? null
   console.log({ id })
   if (!id) {
-    c.set('user', null)
-    c.set('session', null)
+    const who = c.set('user', null)
+    const huh = c.set('session', null)
+
+    console.log({who})
+    console.log({huh})
     return next()
   }
   console.log('session chexx')

@@ -1,5 +1,5 @@
 import pg from 'pg'
-import { app } from './hono'
+import { app } from '../server'
 
 const { Client } = pg
 
@@ -48,7 +48,7 @@ async function ensureTablesExist() {
     await writeClient.query(`
       CREATE TABLE IF NOT EXISTS public.users (
         userid TEXT PRIMARY KEY,
-        to TEXT,
+        "to" TEXT,
         recovery TEXT,
         timestamp TIMESTAMP,
         log_addr TEXT,

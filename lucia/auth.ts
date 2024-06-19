@@ -1,11 +1,7 @@
 import { DrizzlePostgreSQLAdapter } from '@lucia-auth/adapter-drizzle'
 import { Lucia, TimeSpan } from 'lucia'
-import type {
-  RegisteredDatabaseSessionAttributes,
-  RegisteredDatabaseUserAttributes,
-} from 'lucia'
-import { db } from './db'
-import * as dbSchema from './schema'
+import { db } from '../clients/db'
+import * as dbSchema from '../database/schema'
 
 export interface UserAttributes {
   userId: number

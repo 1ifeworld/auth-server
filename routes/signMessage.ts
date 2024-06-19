@@ -1,11 +1,11 @@
 // src/routes/signMessageRoutes.ts
 
 import { Hono } from 'hono'
-import { signMessage } from '../signatures'
+import { signMessage } from '../lib/signatures'
 
 export const signMessageRoute = new Hono()
 
-type SignatureResponse = { sig: string, signer: string }
+type SignatureResponse = { sig: string; signer: string }
 
 function isSignatureResponse(data: any): data is SignatureResponse {
   return (

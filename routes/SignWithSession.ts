@@ -1,9 +1,9 @@
-import { lucia } from '../auth'
-import { kms } from '../aws'
-import { KEY_REF } from '../keys'
-import { signMessageWithKey } from '../signatures'
-import { writeClient } from '../database'
 import { Hono } from 'hono'
+import { kms } from '../clients/aws'
+import { writeClient } from '../database/watcher'
+import { KEY_REF } from '../lib/keys'
+import { signMessageWithKey } from '../lib/signatures'
+import { lucia } from '../lucia/auth'
 
 export const signWithSession = new Hono()
 
@@ -16,7 +16,6 @@ signWithSession.post('/signMessageWithSession', async (c) => {
     }
 
     const { session, user } = await lucia.validateSession(sessionId)
-
 
     if (!session) {
       return c.json({ success: false, message: 'Invalid session' }, 404)

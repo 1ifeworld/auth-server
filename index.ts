@@ -29,17 +29,15 @@ app.use('*', async (c, next) => {
   const { session, user } = await lucia.validateSession(id)
   console.log('sessionpost')
   if (session && session.fresh) {
-    const sessionCookie = c.header('Set-Cookie', lucia.createSessionCookie(session.id).serialize(), {
+ c.header('Set-Cookie', lucia.createSessionCookie(session.id).serialize(), {
       append: true,
     })
 
-    console.log({sessionCookie})
   }
   if (!session) {
-   const blankCookie =  c.header('Set-Cookie', lucia.createBlankSessionCookie().serialize(), {
+ c.header('Set-Cookie', lucia.createBlankSessionCookie().serialize(), {
       append: true,
     })
-    console.log({blankCookie})
   }
   c.set('user', user)
   c.set('session', session)
@@ -178,8 +176,6 @@ app.post('/generateEncryptKeysAndSessionId', async (c) => {
       })
 
       sessionId = session.id
-      deviceId = session.deviceId
-      console.log("wtf", deviceId)
       
     } else {
       console.log('returning user!')

@@ -40,7 +40,7 @@ export const lucia = new Lucia<DatabaseSessionAttributes, UserAttributes>(adapte
   sessionCookie: {
     expires: false,
     attributes: {
-      secure: false,
+      secure: true,
     },
   },
   getSessionAttributes(

@@ -15,7 +15,7 @@ import { writeClient } from './watcher'
 // // cross site request forgery helper
 app.use(csrf())
 
-const MESSAGE = 'NADA' // placeholder message
+const MESSAGE = 'NADA' 
 
 app.use('*', async (c, next) => {
   const id = getCookie(c, lucia.sessionCookieName) ?? null

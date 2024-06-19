@@ -21,21 +21,13 @@ export interface SessionAttributes {
   expiresAt: Date
 }
 
-interface DatabaseSessionAttributes {
-  userId: number
-  deviceId: string
-  expiresAt: Date
-  created: Date
-}
-
-
 const adapter = new DrizzlePostgreSQLAdapter(
   db,
   dbSchema.sessionsTable,
   dbSchema.usersTable
 )
 
-export const lucia = new Lucia<DatabaseSessionAttributes, UserAttributes>(adapter, {
+export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
   sessionExpiresIn: new TimeSpan(2, 'w'),
   sessionCookie: {
     expires: false,
@@ -44,7 +36,7 @@ export const lucia = new Lucia<DatabaseSessionAttributes, UserAttributes>(adapte
     },
   },
   getSessionAttributes(
-    databaseSessionAttributes: DatabaseSessionAttributes,
+    databaseSessionAttributes: SessionAttributes,
   ) {
     return {
       userId: databaseSessionAttributes.userId,
@@ -54,8 +46,8 @@ export const lucia = new Lucia<DatabaseSessionAttributes, UserAttributes>(adapte
     }
   },
   getUserAttributes(
-    databaseUserAttributes: RegisteredDatabaseUserAttributes,
-  ): UserAttributes {
+    databaseUserAttributes: UserAttributes,
+  ) {
     return {
       userId: databaseUserAttributes.userId,
       to: databaseUserAttributes.to,
@@ -72,11 +64,6 @@ declare module 'lucia' {
     DatabaseSessionAttributes: SessionAttributes
   }
 }
-
-
-
-// const generateDeviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
-
 
 /// usage example not currently being used 
 // export async function createAndValidateSession(sessionId: string) {

@@ -6,17 +6,28 @@ import { KEY_REF, custodyAddress, publicKey } from '../lib/keys'
 import { verifyMessage } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
 import { app } from '../server'
+import type { Hex } from '@noble/curves/abstract/utils'
+
+export interface AuthReq {
+    deviceId: String,
+    sessionId: String,
+    SIWEMsg: {
+        custodyAddress: Hex
+        message: string
+        signature: Uint8Array
+    }
+}
 
 app.post('/provisionSession', async (c) => {
   console.log('IN ENCRYPT ROUTE')
   try {
-    const { deviceId, sessionToken, signMsg } = await c.req.json()
+    const { deviceId, sessionToken, SIWEMsg } = await c.req.json()
 
-    if (!deviceId || !signMsg) {
+    if (!deviceId || !SIWEMsg) {
       return c.json({ success: false, message: 'Missing parameters' }, 400)
     }
 
-    const { message, signature } = signMsg
+    const { message, signature } = SIWEMsg
 
     const selectDeviceQuery = `SELECT userid, deviceid FROM public.hashes WHERE custodyAddress = $1`
     const deviceResult = await writeClient.query(selectDeviceQuery, [deviceId])
@@ -27,6 +38,7 @@ app.post('/provisionSession', async (c) => {
     if (deviceResult.rows.length > 0) {
       console.log('Device exists in hashes table')
 
+      // Check if session token was passed
       if (sessionToken) {
         const { session } = await lucia.validateSession(sessionToken)
         if (session) {
@@ -39,6 +51,7 @@ app.post('/provisionSession', async (c) => {
         }
       }
 
+      // Verify the SIWE message if no valid session token
       const isValid = verifyMessage(message, signature, Buffer.from(publicKey).toString('hex'))
       if (!isValid) {
         return c.json({ success: false, message: 'Invalid signature' }, 400)
@@ -57,6 +70,7 @@ app.post('/provisionSession', async (c) => {
       })
 
       sessionId = session.id
+
     } else {
       console.log('Device does not exist in hashes table')
       const isValid = verifyMessage(message, signature, Buffer.from(publicKey).toString('hex'))
@@ -65,8 +79,8 @@ app.post('/provisionSession', async (c) => {
       }
 
       const newDeviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
-      const userId = 25
 
+      userId = 25 
 
       const insertKeysQuery = `
         INSERT INTO public.hashes (userid, custodyAddress, deviceid)
@@ -74,7 +88,7 @@ app.post('/provisionSession', async (c) => {
       `
 
       await writeClient.query(insertKeysQuery, [
-        userId, 
+        userId,
         custodyAddress,
         newDeviceId,
       ])
@@ -90,7 +104,6 @@ app.post('/provisionSession', async (c) => {
       })
 
       sessionId = session.id
-
     }
 
     const sessionCookie = lucia.createSessionCookie(sessionId)

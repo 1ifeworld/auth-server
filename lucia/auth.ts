@@ -1,11 +1,7 @@
 import { DrizzlePostgreSQLAdapter } from '@lucia-auth/adapter-drizzle'
 import { Lucia, TimeSpan } from 'lucia'
-import type {
-  RegisteredDatabaseSessionAttributes,
-  RegisteredDatabaseUserAttributes,
-} from 'lucia'
-import { db } from './db'
-import * as dbSchema from './schema'
+import { db } from '../clients/db'
+import * as dbSchema from '../database/schema'
 
 export interface UserAttributes {
   userId: number
@@ -24,7 +20,7 @@ export interface SessionAttributes {
 const adapter = new DrizzlePostgreSQLAdapter(
   db,
   dbSchema.sessionsTable,
-  dbSchema.usersTable
+  dbSchema.usersTable,
 )
 
 export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
@@ -35,9 +31,7 @@ export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
       secure: true,
     },
   },
-  getSessionAttributes(
-    databaseSessionAttributes: SessionAttributes,
-  ) {
+  getSessionAttributes(databaseSessionAttributes: SessionAttributes) {
     return {
       userId: databaseSessionAttributes.userId,
       deviceId: databaseSessionAttributes.deviceId,
@@ -45,9 +39,7 @@ export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
       expiresAt: new Date(databaseSessionAttributes.expiresAt),
     }
   },
-  getUserAttributes(
-    databaseUserAttributes: UserAttributes,
-  ) {
+  getUserAttributes(databaseUserAttributes: UserAttributes) {
     return {
       userId: databaseUserAttributes.userId,
       to: databaseUserAttributes.to,
@@ -65,7 +57,7 @@ declare module 'lucia' {
   }
 }
 
-/// usage example not currently being used 
+/// usage example not currently being used
 // export async function createAndValidateSession(sessionId: string) {
 //   const userId = await getUserId(sessionId)
 //   sessionAttributes.userId = userId

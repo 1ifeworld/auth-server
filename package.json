@@ -5,7 +5,8 @@
   "scripts": {
     "lint": "biome check . --apply",
     "format": "biome format . --write",
-    "start": "bun --watch index.ts"
+    "start": "bun --watch index.ts",
+    "start-watcher": "bun --watch database/watcher.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.7.3",

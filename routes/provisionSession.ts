@@ -33,12 +33,16 @@ app.post('/provisionSession', async (c) => {
 
     let userId
 
-
     if (deviceResult.rows.length > 0) {
       console.log('Device exists in hashes table')
 
       if (sessionId) {
         const { session } = await lucia.validateSession(sessionId)
+
+        if (!session) {
+            return c.json({ success: false, message: 'Invalid session' }, 404)
+          }
+          
         if (session) {
           return c.json({
             success: true,

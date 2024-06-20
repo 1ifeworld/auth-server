@@ -1,8 +1,6 @@
-import { ed25519 } from '@noble/curves/ed25519'
 import { alphabet, generateRandomString } from 'oslo/crypto'
-import { kms } from '../clients/aws'
 import { writeClient } from '../database/watcher'
-import { KEY_REF, custodyAddress, publicKey } from '../lib/keys'
+import { custodyAddress, publicKey } from '../lib/keys'
 import { verifyMessage } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
 import { app } from '../server'
@@ -11,7 +9,7 @@ import type { Hex } from '@noble/curves/abstract/utils'
 export interface AuthReq {
   deviceId: String
   sessionId: String
-  SIWEMsg: {
+  siweMsg: {
     custodyAddress: Hex
     message: string
     signature: Uint8Array
@@ -20,24 +18,29 @@ export interface AuthReq {
 
 app.post('/provisionSession', async (c) => {
   try {
-    const { deviceId, sessionId, SIWEMsg } = await c.req.json()
+    const { deviceId, sessionId, siweMsg } = await c.req.json()
 
-    if (!deviceId || !SIWEMsg) {
+    console.log(" received ", deviceId, sessionId, siweMsg)
+
+    if (!deviceId || !siweMsg) {
       return c.json({ success: false, message: 'Missing parameters' }, 400)
     }
 
-    const { message, signature } = SIWEMsg
+    const { message, signature } = siweMsg
 
     const selectDeviceQuery = `SELECT userid, deviceid FROM public.hashes WHERE custodyAddress = $1`
     const deviceResult = await writeClient.query(selectDeviceQuery, [deviceId])
+    console.log({deviceResult})
 
     let userId
 
     if (deviceResult.rows.length > 0) {
-      console.log('Device exists in hashes table')
+      console.log('Device exists in hashes table **-**')
+      console.log(deviceResult.rows[0])
 
       if (sessionId) {
         const { session } = await lucia.validateSession(sessionId)
+        console.log({session})
 
         if (!session) {
           return c.json({ success: false, message: 'Invalid session' }, 404)
@@ -49,12 +52,15 @@ app.post('/provisionSession', async (c) => {
           sessionId: session.id,
           deviceId: deviceResult.rows[0].deviceid,
         })
+
       } else {
+        // verify message 
         const isValid = verifyMessage(
           message,
           signature,
           Buffer.from(publicKey).toString('hex'),
         )
+        
         if (!isValid) {
           return c.json({ success: false, message: 'Invalid signature' }, 400)
         }
@@ -131,6 +137,7 @@ app.post('/provisionSession', async (c) => {
         deviceId: newDeviceId,
       })
     }
+
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred'
     if (error instanceof Error) {

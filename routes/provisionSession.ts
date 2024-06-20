@@ -28,7 +28,7 @@ app.post('/provisionSession', async (c) => {
 
     const { message, signature } = siweMsg
 
-    const selectDeviceQuery = `SELECT userid, deviceid FROM public.hashes WHERE custodyAddress = $1`
+    const selectDeviceQuery = `SELECT userid, deviceid FROM public.hashes WHERE deviceid = $1`
     const deviceResult = await writeClient.query(selectDeviceQuery, [deviceId])
     console.log({deviceResult})
 
@@ -60,7 +60,7 @@ app.post('/provisionSession', async (c) => {
           signature,
           Buffer.from(publicKey).toString('hex'),
         )
-        
+
         if (!isValid) {
           return c.json({ success: false, message: 'Invalid signature' }, 400)
         }

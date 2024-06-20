@@ -65,7 +65,7 @@ app.post('/provisionSession', async (c) => {
       }
 
       const newDeviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
-      const userId = 0 
+      const userId = 25
 
 
       const insertKeysQuery = `

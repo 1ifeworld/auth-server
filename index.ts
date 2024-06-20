@@ -1,4 +1,4 @@
-import { app } from './server'
+import { app } from './routes'
 
 console.log("initialized here: index")
 

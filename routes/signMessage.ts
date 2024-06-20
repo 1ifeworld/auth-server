@@ -1,7 +1,6 @@
 import { signMessage } from '../lib/signatures'
 import { app } from '../server'
 
-
 app.post('/sign', async (c) => {
   try {
     const { message } = await c.req.json()

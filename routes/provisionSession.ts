@@ -9,13 +9,13 @@ import { app } from '../server'
 import type { Hex } from '@noble/curves/abstract/utils'
 
 export interface AuthReq {
-    deviceId: String,
-    sessionId: String,
-    SIWEMsg: {
-        custodyAddress: Hex
-        message: string
-        signature: Uint8Array
-    }
+  deviceId: String
+  sessionId: String
+  SIWEMsg: {
+    custodyAddress: Hex
+    message: string
+    signature: Uint8Array
+  }
 }
 
 app.post('/provisionSession', async (c) => {
@@ -52,7 +52,11 @@ app.post('/provisionSession', async (c) => {
       }
 
       // Verify the SIWE message if no valid session token
-      const isValid = verifyMessage(message, signature, Buffer.from(publicKey).toString('hex'))
+      const isValid = verifyMessage(
+        message,
+        signature,
+        Buffer.from(publicKey).toString('hex'),
+      )
       if (!isValid) {
         return c.json({ success: false, message: 'Invalid signature' }, 400)
       }
@@ -70,17 +74,23 @@ app.post('/provisionSession', async (c) => {
       })
 
       sessionId = session.id
-
     } else {
       console.log('Device does not exist in hashes table')
-      const isValid = verifyMessage(message, signature, Buffer.from(publicKey).toString('hex'))
+      const isValid = verifyMessage(
+        message,
+        signature,
+        Buffer.from(publicKey).toString('hex'),
+      )
       if (!isValid) {
         return c.json({ success: false, message: 'Invalid signature' }, 400)
       }
 
-      const newDeviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'))
+      const newDeviceId = generateRandomString(
+        10,
+        alphabet('a-z', 'A-Z', '0-9', '-', '_'),
+      )
 
-      userId = 25 
+      userId = 25
 
       const insertKeysQuery = `
         INSERT INTO public.hashes (userid, custodyAddress, deviceid)

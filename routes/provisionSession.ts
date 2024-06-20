@@ -36,24 +36,6 @@ app.post('/provisionSession', async (c) => {
     if (deviceResult.rows.length > 0) {
       console.log('Device exists in hashes table')
 
-      if (sessionId) {
-        const { session } = await lucia.validateSession(sessionId)
-
-        if (!session) {
-            return c.json({ success: false, message: 'Invalid session' }, 404)
-          }
-          
-        if (session) {
-          return c.json({
-            success: true,
-            userId: deviceResult.rows[0].userid,
-            sessionId: session.id,
-            deviceId: deviceResult.rows[0].deviceid,
-          })
-        }
-      }
-
-      // Verify the SIWE message if no valid session token
       const isValid = verifyMessage(
         message,
         signature,
@@ -63,25 +45,29 @@ app.post('/provisionSession', async (c) => {
         return c.json({ success: false, message: 'Invalid signature' }, 400)
       }
 
-      userId = deviceResult.rows[0].userid
+      if (sessionId) {
+        const { session } = await lucia.validateSession(sessionId)
 
-      const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
-      const created = new Date(Date.now())
-
-      const session = await lucia.createSession(userId.toString(), {
-        userId: userId,
-        deviceId: deviceId,
-        expiresAt,
-        created,
-      })
-
-    } else { 
+        if (!session) {
+          return c.json({ success: false, message: 'Invalid session' }, 404)
+        }
+        if (session) {
+          return c.json({
+            success: true,
+            userId: deviceResult.rows[0].userid,
+            sessionId: session.id,
+            deviceId: deviceResult.rows[0].deviceid,
+          })
+        }
+      }
+    } else {
       console.log('Device does not exist in hashes table')
       const isValid = verifyMessage(
         message,
         signature,
         Buffer.from(publicKey).toString('hex'),
       )
+
       if (!isValid) {
         return c.json({ success: false, message: 'Invalid signature' }, 400)
       }
@@ -92,7 +78,6 @@ app.post('/provisionSession', async (c) => {
       )
 
       userId = 25
-      let sessionId
 
       const insertKeysQuery = `
         INSERT INTO public.hashes (userid, custodyAddress, deviceid)
@@ -115,18 +100,20 @@ app.post('/provisionSession', async (c) => {
         created,
       })
 
-      sessionId = session.id
+      const sessionCookie = lucia.createSessionCookie(session.id)
+      c.header('Set-Cookie', sessionCookie.serialize(), { append: true })
+
+      return c.json({
+        success: true,
+        userId,
+        sessionId: session.id,
+        deviceId: newDeviceId,
+      })
     }
 
     const sessionCookie = lucia.createSessionCookie(sessionId)
     c.header('Set-Cookie', sessionCookie.serialize(), { append: true })
 
-    return c.json({
-      success: true,
-      userId,
-      sessionId,
-      deviceId,
-    })
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred'
     if (error instanceof Error) {

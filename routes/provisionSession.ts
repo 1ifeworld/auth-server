@@ -19,9 +19,8 @@ export interface AuthReq {
 }
 
 app.post('/provisionSession', async (c) => {
-  console.log('IN ENCRYPT ROUTE')
   try {
-    const { deviceId, sessionToken, SIWEMsg } = await c.req.json()
+    const { deviceId, sessionId, SIWEMsg } = await c.req.json()
 
     if (!deviceId || !SIWEMsg) {
       return c.json({ success: false, message: 'Missing parameters' }, 400)
@@ -33,14 +32,13 @@ app.post('/provisionSession', async (c) => {
     const deviceResult = await writeClient.query(selectDeviceQuery, [deviceId])
 
     let userId
-    let sessionId
+
 
     if (deviceResult.rows.length > 0) {
       console.log('Device exists in hashes table')
 
-      // Check if session token was passed
-      if (sessionToken) {
-        const { session } = await lucia.validateSession(sessionToken)
+      if (sessionId) {
+        const { session } = await lucia.validateSession(sessionId)
         if (session) {
           return c.json({
             success: true,

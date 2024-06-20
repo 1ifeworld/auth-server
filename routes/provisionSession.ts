@@ -71,8 +71,7 @@ app.post('/provisionSession', async (c) => {
         created,
       })
 
-      sessionId = session.id
-    } else {
+    } else { 
       console.log('Device does not exist in hashes table')
       const isValid = verifyMessage(
         message,
@@ -89,6 +88,7 @@ app.post('/provisionSession', async (c) => {
       )
 
       userId = 25
+      let sessionId
 
       const insertKeysQuery = `
         INSERT INTO public.hashes (userid, custodyAddress, deviceid)

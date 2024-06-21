@@ -29,7 +29,7 @@ export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
     name: 'AYO THIS IS A GALLETA I MADE',
     expires: false,
     attributes: {
-      secure: false,
+      secure: true,
     },
   },
   getSessionAttributes(databaseSessionAttributes: SessionAttributes) {

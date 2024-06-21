@@ -29,7 +29,7 @@ export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
     name: 'AYO THIS IS A GALLETA I MADE',
     expires: false,
     attributes: {
-      secure: true,
+      secure: false,
     },
   },
   getSessionAttributes(databaseSessionAttributes: SessionAttributes) {
@@ -48,6 +48,7 @@ export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
       timestamp: databaseUserAttributes.timestamp,
     }
   },
+  
 })
 
 declare module 'lucia' {

@@ -30,19 +30,15 @@ app.use(
 
 app.use('*', async (c, next) => {
   const sessionId = getCookie(c, lucia.sessionCookieName) ?? null
+  console.log({sessionId})
 
-  if (!sessionId) {
-    return new Response(null, {
-      status: 401,
-    })
-  }
-
-  console.log({ sessionId })
   if (!sessionId) {
     c.set('user', null)
     c.set('session', null)
+    console.log("sorry pal")
     return next()
   }
+
   const { session, user } = await lucia.validateSession(sessionId)
   console.log({ session })
   if (session && session.fresh) {

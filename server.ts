@@ -26,34 +26,29 @@ app.use('*', cors({
 }))
 
 
-app.use('*', async (c, next) => {
-  const id = getCookie(c, lucia.sessionCookieName) ?? null
-  console.log({ id })
-  if (!id) {
-    const who = c.set('user', null)
-    const huh = c.set('session', null)
 
-    console.log({who})
-    console.log({huh})
-    return next()
-  }
-  console.log('session chexx')
-  const { session, user } = await lucia.validateSession(id)
-  console.log('sessionpost')
-  if (session && session.fresh) {
-    c.header('Set-Cookie', lucia.createSessionCookie(session.id).serialize(), {
-      append: true,
-    })
-  }
-  if (!session) {
-   const blankCookies = c.header('Set-Cookie', lucia.createBlankSessionCookie().serialize(), {
-      append: true,
-    })
-    console.log({blankCookies})
-  }
-  c.set('user', user)
-  c.set('session', session)
-  return next()
+app.use("*", async (c, next) => {
+	const sessionId = getCookie(c, lucia.sessionCookieName) ?? null
+  console.log({sessionId})
+	if (!sessionId) {
+		c.set("user", null)
+		c.set("session", null)
+		return next()
+	}
+	const { session, user } = await lucia.validateSession(sessionId)
+	if (session && session.fresh) {
+		c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
+			append: true
+		})
+	}
+	if (!session) {
+		c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
+			append: true
+		})
+	}
+	c.set("user", user)
+	c.set("session", session)
+	return next()
 })
 
 

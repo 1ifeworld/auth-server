@@ -19,7 +19,7 @@ app.use(csrf())
 app.use(
   '*',
   cors({
-    origin: '*',
+    origin: 'http://localhost:8081/, http://localhost:8081',
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     exposeHeaders: ['Content-Length'],
@@ -29,7 +29,7 @@ app.use(
 )
 
 // Session and user handling middleware
-app.use('*', async (c, next) => {
+app.use('*', async (c, next) => { 
   const sessionId = getCookie(c, lucia.sessionCookieName) ?? null
   console.log('Session ID:', sessionId)
 

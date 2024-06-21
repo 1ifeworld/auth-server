@@ -16,41 +16,49 @@ export const app = new Hono<{
 // Cross Site Request Forgery (CSRF) protection middleware
 app.use(csrf())
 
-app.use('*', cors({
-  origin: '*', 
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  exposeHeaders: ['Content-Length'],
-  maxAge: 600,
-  credentials: true,
-}))
+app.use(
+  '*',
+  cors({
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+    exposeHeaders: ['Content-Length'],
+    maxAge: 600,
+    credentials: true,
+  }),
+)
 
+app.use('*', async (c, next) => {
+  const sessionId = getCookie(c, lucia.sessionCookieName) ?? null
 
+  if (!sessionId) {
+    return new Response(null, {
+      status: 401,
+    })
+  }
 
-app.use("*", async (c, next) => {
-	const sessionId = getCookie(c, lucia.sessionCookieName) ?? null
-  console.log({sessionId})
-	if (!sessionId) {
-		c.set("user", null)
-		c.set("session", null)
-		return next()
-	}
-	const { session, user } = await lucia.validateSession(sessionId)
-	if (session && session.fresh) {
-		c.header("Set-Cookie", lucia.createSessionCookie(session.id).serialize(), {
-			append: true
-		})
-	}
-	if (!session) {
-		c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize(), {
-			append: true
-		})
-	}
-	c.set("user", user)
-	c.set("session", session)
-	return next()
+  console.log({ sessionId })
+  if (!sessionId) {
+    c.set('user', null)
+    c.set('session', null)
+    return next()
+  }
+  const { session, user } = await lucia.validateSession(sessionId)
+  console.log({ session })
+  if (session && session.fresh) {
+    c.header('Set-Cookie', lucia.createSessionCookie(session.id).serialize(), {
+      append: true,
+    })
+  }
+  if (!session) {
+    c.header('Set-Cookie', lucia.createBlankSessionCookie().serialize(), {
+      append: true,
+    })
+  }
+  c.set('user', user)
+  c.set('session', session)
+  return next()
 })
-
 
 app.get('/', async (c) => {
   const user = c.get('user')

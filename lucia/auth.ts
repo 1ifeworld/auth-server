@@ -26,6 +26,7 @@ const adapter = new DrizzlePostgreSQLAdapter(
 export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
   sessionExpiresIn: new TimeSpan(2, 'w'),
   sessionCookie: {
+    name: 'AYO THIS IS A GALLETA I MADE',
     expires: false,
     attributes: {
       secure: true,

@@ -237,6 +237,7 @@ app.post('/provisionSession', async (c) => {
       })
   
       const sessionCookie = lucia.createSessionCookie(session.id)
+      console.log({sessionCookie})
       c.header('Set-Cookie', sessionCookie.serialize(), { append: true })
   
       return c.json({

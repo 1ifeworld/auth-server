@@ -17,7 +17,7 @@ export const app = new Hono<{
 app.use(csrf())
 
 app.use('*', cors({
-  origin: ['http://localhost:8081', 'http://localhost:3000'], 
+  origin: '*', 
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   exposeHeaders: ['Content-Length'],

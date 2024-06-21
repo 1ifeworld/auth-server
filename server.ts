@@ -56,14 +56,14 @@ app.use('*', async (c, next) => {
   return next()
 })
 
-app.get('/', async (c) => {
-  const user = c.get('user')
-  const session = c.get('session')
+// app.get('/', async (c) => {
+//   const user = c.get('user')
+//   const session = c.get('session')
 
-  console.log('got session at main', session)
-  if (!user) {
-    return c.body(null, 401)
-  }
-})
+//   console.log('got session at main', session)
+//   if (!user) {
+//     return c.body(null, 401)
+//   }
+// })
 
 import './routes'

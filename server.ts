@@ -19,7 +19,7 @@ app.use(csrf())
 app.use(
   '*',
   cors({
-    origin: 'http://localhost:8081/, http://localhost:8081',
+    origin: 'http://localhost:8081',
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     exposeHeaders: ['Content-Length'],

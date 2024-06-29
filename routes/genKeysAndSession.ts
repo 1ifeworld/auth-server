@@ -59,16 +59,9 @@ app.post('/genKeys', async (c) => {
         })
         .promise()
 
-      const encryptedPublicKey = await kms
-        .encrypt({
-          KeyId: KEY_REF,
-          Plaintext: Buffer.from(eddsaPublicKey),
-        })
-        .promise()
-
       if (
         !encryptedPrivateKey.CiphertextBlob ||
-        !encryptedPublicKey.CiphertextBlob
+        !eddsaPublicKey.toString()
       ) {
         throw new Error('Encryption failed')
       }
@@ -85,8 +78,10 @@ app.post('/genKeys', async (c) => {
         publicKeyHex,
         deviceId,
         encryptedPrivateKey.CiphertextBlob.toString('base64'),
-        encryptedPublicKey.CiphertextBlob.toString('base64'),
+        eddsaPublicKey.toString(),
       ])
+
+      console.log({encrypted: eddsaPublicKey.toString()})
 
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
       const created = new Date(Date.now())

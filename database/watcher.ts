@@ -67,9 +67,9 @@ async function ensureTablesExist() {
       )
     `)
 
-    // Create hashes table
+    // Create keys table
     await writeClient.query(`
-      CREATE TABLE IF NOT EXISTS public.hashes (
+      CREATE TABLE IF NOT EXISTS public.keys (
         userid TEXT NOT NULL REFERENCES public.users(userid),
         custodyAddress TEXT NOT NULL,
         deviceid TEXT NOT NULL,

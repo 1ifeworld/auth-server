@@ -28,14 +28,14 @@ export interface AuthReq {
 
 //     const { message, signature } = siweMsg
 
-//     const selectDeviceQuery = `SELECT userid, deviceid FROM public.hashes WHERE deviceid = $1`
+//     const selectDeviceQuery = `SELECT userid, deviceid FROM public.keys WHERE deviceid = $1`
 //     const deviceResult = await writeClient.query(selectDeviceQuery, [deviceId])
 //     console.log({deviceResult})
 
 //     let userId
 
 //     if (deviceResult.rows.length > 0) {
-//       console.log('Device exists in hashes table **-**')
+//       console.log('Device exists in keys table **-**')
 //       console.log(deviceResult.rows[0])
 
 //       if (sessionId) {
@@ -88,7 +88,7 @@ export interface AuthReq {
 //         })
 //       }
 //     } else {
-//       console.log('Device does not exist in hashes table')
+//       console.log('Device does not exist in keys table')
 //       const isValid = verifyMessage(
 //         message,
 //         signature,
@@ -107,7 +107,7 @@ export interface AuthReq {
 //       userId = 25
 
 //       const insertKeysQuery = `
-//         INSERT INTO public.hashes (userid, custodyAddress, deviceid)
+//         INSERT INTO public.keys (userid, custodyAddress, deviceid)
 //         VALUES ($1, $2, $3)
 //       `
 
@@ -189,7 +189,7 @@ app.post('/provisionSession', async (c) => {
       userId = 25
 
       const insertKeysQuery = `
-          INSERT INTO public.hashes (userid, custodyAddress, deviceid)
+          INSERT INTO public.keys (userid, custodyAddress, deviceid)
           VALUES ($1, $2, $3)
         `
       await writeClient.query(insertKeysQuery, [
@@ -200,7 +200,7 @@ app.post('/provisionSession', async (c) => {
     }
     // Case 2: Device ID provided
     else {
-      const selectDeviceQuery = `SELECT userid, deviceid FROM public.hashes WHERE deviceid = $1`
+      const selectDeviceQuery = `SELECT userid, deviceid FROM public.keys WHERE deviceid = $1`
       const deviceResult = await writeClient.query(selectDeviceQuery, [
         deviceId,
       ])
@@ -245,7 +245,7 @@ app.post('/provisionSession', async (c) => {
           userId = 25 // Fixed user ID for new devices
 
           const insertKeysQuery = `
-              INSERT INTO public.hashes (userid, custodyAddress, deviceid)
+              INSERT INTO public.keys (userid, custodyAddress, deviceid)
               VALUES ($1, $2, $3)
             `
           await writeClient.query(insertKeysQuery, [

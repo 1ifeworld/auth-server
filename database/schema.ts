@@ -25,8 +25,8 @@ export const sessionsTable = pgTable('sessions', {
 export type InsertSession = typeof sessionsTable.$inferInsert
 export type SelectSession = typeof sessionsTable.$inferSelect
 
-export const hashesTable = pgTable(
-  'hashes',
+export const keysTable = pgTable(
+  'keys',
   {
     userid: numeric('userid')
       .notNull()
@@ -41,5 +41,5 @@ export const hashesTable = pgTable(
   }),
 )
 
-export type InsertHash = typeof hashesTable.$inferInsert
-export type SelectHash = typeof hashesTable.$inferSelect
+export type InsertHash = typeof keysTable.$inferInsert
+export type SelectHash = typeof keysTable.$inferSelect

@@ -33,7 +33,7 @@ app.post('/genKeys', async (c) => {
     const publicKeyHex = Buffer.from(publicKey).toString('hex')
 
     const selectHashQuery = `
-        SELECT userid FROM public.hashes
+        SELECT userid FROM public.keys
         WHERE custodyAddress = $1
       `
     const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
@@ -76,7 +76,7 @@ app.post('/genKeys', async (c) => {
       console.log('prestorekeys', { userId, publicKeyHex })
 
       const insertKeysQuery = `
-          INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
+          INSERT INTO public.keys (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
           VALUES ($1, $2, $3, $4, $5)
         `
 

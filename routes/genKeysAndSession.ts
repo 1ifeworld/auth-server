@@ -47,6 +47,7 @@ app.post('/genKeys', async (c) => {
       console.log('first time user!')
       const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
       const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
+
       deviceId = generateRandomString(
         10,
         alphabet('a-z', 'A-Z', '0-9', '-', '_'),
@@ -78,7 +79,7 @@ app.post('/genKeys', async (c) => {
         publicKeyHex,
         deviceId,
         encryptedPrivateKey.CiphertextBlob.toString('base64'),
-        eddsaPublicKey.toString(),
+        Buffer.from(eddsaPublicKey).toString('hex'),
       ])
 
       console.log({encrypted: eddsaPublicKey.toString()})

@@ -186,7 +186,7 @@ app.post('/provisionSession', async (c) => {
         10,
         alphabet('a-z', 'A-Z', '0-9', '-', '_'),
       )
-      userId = 25
+      userId = 10
 
       const insertKeysQuery = `
           INSERT INTO public.keys (userid, custodyAddress, deviceid)

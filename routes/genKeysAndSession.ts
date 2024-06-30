@@ -70,7 +70,7 @@ app.post('/genKeys', async (c) => {
       console.log('prestorekeys', { userId, publicKeyHex })
 
       const insertKeysQuery = `
-          INSERT INTO public.keys (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
+          INSERT INTO public.keys (userid, custodyAddress, deviceid, encryptedprivatekey, publickey)
           VALUES ($1, $2, $3, $4, $5)
         `
 

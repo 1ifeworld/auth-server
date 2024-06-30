@@ -73,7 +73,7 @@ async function ensureTablesExist() {
         userid TEXT NOT NULL REFERENCES public.users(userid),
         custodyAddress TEXT NOT NULL,
         deviceid TEXT NOT NULL,
-        encryptedpublickey TEXT NOT NULL,
+        publickey TEXT NOT NULL,
         encryptedprivatekey TEXT NOT NULL,
         PRIMARY KEY (userid, custodyAddress, deviceid)
       )

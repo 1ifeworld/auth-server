@@ -36,7 +36,7 @@ app.post('/signWithSession', async (c) => {
 
     // Retrieve the stored encrypted keys
     const selectKeysQuery = `
-      SELECT encryptedprivatekey FROM public.hashes
+      SELECT encryptedprivatekey FROM public.keys
       WHERE userid = $1
     `
     const keysResult = await writeClient.query(selectKeysQuery, [userid])
@@ -77,7 +77,7 @@ app.post('/signWithSession', async (c) => {
     }
 
     const updateKeysQuery = `
-      UPDATE public.hashes
+      UPDATE public.keys
       SET encryptedprivatekey = $1
       WHERE userid = $2
     `

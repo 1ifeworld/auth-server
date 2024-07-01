@@ -33,7 +33,7 @@ app.post('/genKeys', async (c) => {
     const publicKeyHex = Buffer.from(publicKey).toString('hex')
 
     const selectHashQuery = `
-        SELECT userid FROM public.hashes
+        SELECT userid FROM public.keys
         WHERE custodyAddress = $1
       `
     const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
@@ -47,6 +47,7 @@ app.post('/genKeys', async (c) => {
       console.log('first time user!')
       const eddsaPrivateKey = ed25519.utils.randomPrivateKey()
       const eddsaPublicKey = ed25519.getPublicKey(eddsaPrivateKey)
+
       deviceId = generateRandomString(
         10,
         alphabet('a-z', 'A-Z', '0-9', '-', '_'),
@@ -59,16 +60,9 @@ app.post('/genKeys', async (c) => {
         })
         .promise()
 
-      const encryptedPublicKey = await kms
-        .encrypt({
-          KeyId: KEY_REF,
-          Plaintext: Buffer.from(eddsaPublicKey),
-        })
-        .promise()
-
       if (
         !encryptedPrivateKey.CiphertextBlob ||
-        !encryptedPublicKey.CiphertextBlob
+        !eddsaPublicKey.toString()
       ) {
         throw new Error('Encryption failed')
       }
@@ -76,7 +70,7 @@ app.post('/genKeys', async (c) => {
       console.log('prestorekeys', { userId, publicKeyHex })
 
       const insertKeysQuery = `
-          INSERT INTO public.hashes (userid, custodyAddress, deviceid, encryptedprivatekey, encryptedpublickey)
+          INSERT INTO public.keys (userid, custodyAddress, deviceid, encryptedprivatekey, publickey)
           VALUES ($1, $2, $3, $4, $5)
         `
 
@@ -85,8 +79,10 @@ app.post('/genKeys', async (c) => {
         publicKeyHex,
         deviceId,
         encryptedPrivateKey.CiphertextBlob.toString('base64'),
-        encryptedPublicKey.CiphertextBlob.toString('base64'),
+        Buffer.from(eddsaPublicKey).toString('hex'),
       ])
+
+      console.log({encrypted: eddsaPublicKey.toString()})
 
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
       const created = new Date(Date.now())

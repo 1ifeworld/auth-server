@@ -19,9 +19,9 @@ export async function getUserId(sessionId: string): Promise<number> {
 
 export async function getDeviceId(custodyAddress: string): Promise<string> {
   const result = await db
-    .select({ deviceId: dbSchema.hashesTable.deviceid })
-    .from(dbSchema.hashesTable)
-    .where(sql`${dbSchema.hashesTable.custodyAddress} = ${custodyAddress}`)
+    .select({ deviceId: dbSchema.keysTable.deviceid })
+    .from(dbSchema.keysTable)
+    .where(sql`${dbSchema.keysTable.custodyAddress} = ${custodyAddress}`)
     .limit(1)
     .execute()
   if (result.length > 0) {

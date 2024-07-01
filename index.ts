@@ -1,6 +1,6 @@
 import { app } from './routes'
 
-console.log("initialized here: index")
+console.log('initialized here: index')
 
 Bun.serve({
   fetch: app.fetch,

@@ -47,7 +47,7 @@ async function ensureTablesExist() {
         userid NUMERIC PRIMARY KEY,
         "to" TEXT,
         recovery TEXT,
-        timestamp TEXT,
+        timestamp TIMESTAMP,
         log_addr TEXT,
         block_num NUMERIC
       )

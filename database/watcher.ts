@@ -44,7 +44,7 @@ async function ensureTablesExist() {
     // Create users table
     await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.users (
-        userid INTEGER PRIMARY KEY,
+        userid NUMERIC PRIMARY KEY,
         "to" TEXT,
         recovery TEXT,
         timestamp TEXT,
@@ -57,7 +57,7 @@ async function ensureTablesExist() {
     await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.sessions (
         id TEXT PRIMARY KEY,
-        userid INTEGER NOT NULL REFERENCES public.users(userid),
+        userid NUMERIC NOT NULL REFERENCES public.users(userid),
         deviceid TEXT NOT NULL,
         created TIMESTAMP,
         expiresAt TIMESTAMP NOT NULL
@@ -67,7 +67,7 @@ async function ensureTablesExist() {
     // Create keys table
     await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.keys (
-        userid INTEGER NOT NULL REFERENCES public.users(userid),
+        userid NUMERIC NOT NULL REFERENCES public.users(userid),
         custodyAddress TEXT NOT NULL,
         deviceid TEXT NOT NULL,
         publickey TEXT NOT NULL,
@@ -96,6 +96,8 @@ async function checkAndReplicateData() {
     const lastProcessedBlockNumber =
       maxBlockQueryResult.rows[0].max_block_number
 
+    console.log('Last processed block number:', lastProcessedBlockNumber)
+
     const queryResult = await listenClient.query(
       `
       SELECT userid, "to", recovery, timestamp, log_addr, block_num FROM users
@@ -104,6 +106,8 @@ async function checkAndReplicateData() {
     `,
       [lastProcessedBlockNumber],
     )
+
+    console.log('Rows to replicate:', queryResult.rows.length)
 
     if (queryResult.rows.length > 0) {
       const res = await authDb.query(
@@ -118,7 +122,9 @@ async function checkAndReplicateData() {
           queryResult.rows.map((row) => row.userid),
           queryResult.rows.map((row) => row.to),
           queryResult.rows.map((row) => row.recovery),
-          queryResult.rows.map((row) => new Date(row.timestamp * 1000)),
+          queryResult.rows.map((row) =>
+            new Date(row.timestamp * 1000).toISOString(),
+          ),
           queryResult.rows.map((row) => row.log_addr),
           queryResult.rows.map((row) => row.block_num),
         ],
@@ -126,7 +132,10 @@ async function checkAndReplicateData() {
       console.log('Data replicated:', res.rows)
     }
   } catch (err) {
-    console.error('Error during data replication', (err as Error).stack)
+    console.error('Error during data replication:', err)
+    if (err instanceof Error) {
+      console.error('Error stack:', err.stack)
+    }
   }
 }
 

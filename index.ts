@@ -2,5 +2,5 @@ import { app } from './app'
 import './routes'
 
 export default {
-  fetch: app.fetch
+  fetch: app.fetch,
 }

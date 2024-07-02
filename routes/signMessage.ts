@@ -1,13 +1,13 @@
 import { ed25519 } from '@noble/curves/ed25519'
 import { blake3 } from '@noble/hashes/blake3'
 import { base64 } from '@scure/base'
+import { app } from '../app'
 import { messageDataToUint8Array } from '../buffers/buffers'
 import { kms } from '../clients/aws'
 import { authDb } from '../database/watcher'
 import { selectKeysQuery, selectSessionQuery } from '../lib/queries'
 import { signMessageWithKey } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
-import { app } from '../app'
 
 import type { Message } from '../utils/types'
 import { isMessage } from '../utils/types'
@@ -76,7 +76,7 @@ app.post('/signMessage', async (c) => {
     const signer = Buffer.from(signerUInt8Array).toString('hex')
 
     if (publickey !== signer) {
-        return 
+      return
     }
 
     const signedMessage: Message = {

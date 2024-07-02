@@ -1,4 +1,5 @@
-import { app } from '../index'
+import { app } from '../app'
+
 
 app.get('/', async (c) => {
   const htmlContent = `

@@ -44,7 +44,7 @@ async function ensureTablesExist() {
     // Create users table
     await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.users (
-        userid TEXT PRIMARY KEY,
+        userid INTEGER PRIMARY KEY,
         "to" TEXT,
         recovery TEXT,
         timestamp TEXT,
@@ -57,17 +57,17 @@ async function ensureTablesExist() {
     await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.sessions (
         id TEXT PRIMARY KEY,
-        userid TEXT NOT NULL REFERENCES public.users(userid),
+        userid INTEGER NOT NULL REFERENCES public.users(userid),
         deviceid TEXT NOT NULL,
-        created TEXT,
-        expiresAt TEXT NOT NULL
+        created TIMESTAMP,
+        expiresAt TIMESTAMP NOT NULL
       )
     `)
 
     // Create keys table
     await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.keys (
-        userid TEXT NOT NULL REFERENCES public.users(userid),
+        userid INTEGER NOT NULL REFERENCES public.users(userid),
         custodyAddress TEXT NOT NULL,
         deviceid TEXT NOT NULL,
         publickey TEXT NOT NULL,

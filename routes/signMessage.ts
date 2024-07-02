@@ -7,7 +7,8 @@ import { authDb } from '../database/watcher'
 import { selectKeysQuery, selectSessionQuery } from '../lib/queries'
 import { signMessageWithKey } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
-import { app } from '../index'
+import { app } from '../app'
+
 import type { Message } from '../utils/types'
 import { isMessage } from '../utils/types'
 

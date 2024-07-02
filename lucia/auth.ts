@@ -82,7 +82,6 @@ declare module 'lucia' {
 
 //   return { validatedSession, user, headers }
 // }
-
 // createAndValidateSession('initialSessionId').then(({ validatedSession, user, headers }) => {
 //   console.log('Validated Session:', validatedSession)
 //   console.log('User:', user)

@@ -108,7 +108,7 @@ async function checkAndReplicateData() {
       const res = await authDb.query(
         `
   INSERT INTO public.users (userid, "to", recovery, timestamp, log_addr, block_num)
-  SELECT * FROM unnest($1::NUMERIC[], $2::TEXT[], $3::TEXT[], $4::TEXT[], $5::TEXT[], $6::NUMERIC[])
+  SELECT * FROM unnest($1::NUMERIC[], $2::TEXT[], $3::TEXT[], $4::TIMESTAMP[], $5::TEXT[], $6::NUMERIC[])
   ON CONFLICT (userid) DO UPDATE
   SET "to" = EXCLUDED."to", recovery = EXCLUDED.recovery, timestamp = EXCLUDED.timestamp, log_addr = EXCLUDED.log_addr, block_num = EXCLUDED.block_num
   RETURNING *
@@ -117,8 +117,9 @@ async function checkAndReplicateData() {
           queryResult.rows.map((row) => row.userid),
           queryResult.rows.map((row) => row.to),
           queryResult.rows.map((row) => row.recovery),
-          queryResult.rows
-            .map((row) => new Date(row.timestamp * 1000).toISOString()),
+          queryResult.rows.map((row) =>
+            new Date(row.timestamp * 1000).toISOString(),
+          ),
           queryResult.rows.map((row) => row.log_addr),
           queryResult.rows.map((row) => row.block_num),
         ],

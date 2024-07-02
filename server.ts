@@ -13,20 +13,20 @@ export const app = new Hono<{
 }>()
 
 // Cross Site Request Forgery (CSRF) protection middleware
-app.use(csrf())
+// app.use(csrf())
 
-// CORS middleware
-app.use(
-  '*',
-  cors({
-    origin: 'http://localhost:8081',
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
-    exposeHeaders: ['Content-Length'],
-    maxAge: 600,
-    credentials: true,
-  }),
-)
+// // CORS middleware
+// app.use(
+//   '*',
+//   cors({
+//     origin: 'http://localhost:8081',
+//     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//     allowHeaders: ['Content-Type', 'Authorization'],
+//     exposeHeaders: ['Content-Length'],
+//     maxAge: 600,
+//     credentials: true,
+//   }),
+// )
 
 // Session and user handling middleware
 // app.use('*', async (c, next) => {

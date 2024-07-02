@@ -13,6 +13,8 @@ import { selectKeysQuery, selectSessionQuery } from './lib/queries'
 import { isMessage } from './utils/types'
 import { blake3 } from '@noble/hashes/blake3'
 import { base64 } from '@scure/base'
+import { ed25519 } from '@noble/curves/ed25519'
+
 
 export const app = new Hono<{
   Variables: {
@@ -169,7 +171,7 @@ app.post('/signMessage', async (c) => {
     if (computedHashBase64 !== message.hash) {
       return c.json({ success: false, message: 'Invalid message hash' }, 400)
     }
-    
+
     // Decrypt the private key using AWS KMS
     const decryptedPrivateKey = await kms
       .decrypt({
@@ -185,10 +187,13 @@ app.post('/signMessage', async (c) => {
       decryptedPrivateKey.Plaintext as ArrayBuffer,
     )
     const signature = signMessageWithKey(message.hash, eddsaPrivateKey)
-    const signer = Buffer.from(publickey).toString('hex')
+    const signerUInt8Array = ed25519.getPublicKey(eddsaPrivateKey)
+    const signer = Buffer.from(signerUInt8Array).toString('hex')
+
 
     const signedMessage: Message = {
       signer: signer,
+      messageType: 1,
       messageData: message.messageData,
       hashType: message.hashType,
       hash: message.hash,

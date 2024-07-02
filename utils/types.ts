@@ -36,6 +36,7 @@ export enum SignatureTypes {
 
 export type Message = {
   signer: string
+  messageType: MessageTypes
   messageData: MessageData
   hashType: HashTypes
   hash: string

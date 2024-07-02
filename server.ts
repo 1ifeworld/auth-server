@@ -9,7 +9,7 @@ import { kms } from './clients/aws'
 import { authDb } from './database/watcher'
 import { signMessageWithKey } from './lib/signatures'
 import type { Message } from './utils/types'
-import { selectKeysQuery, selectSessionQuery } from './lib/queries'
+import { selectKeysQuery, selectSessionQuery, selectDeviceQuery } from './lib/queries'
 import { isMessage } from './utils/types'
 import { blake3 } from '@noble/hashes/blake3'
 import { base64 } from '@scure/base'
@@ -313,7 +313,6 @@ app.post('/makeBlake', async (c) => {
       }
       // Case 2: Device ID provided
       else {
-        const selectDeviceQuery = `SELECT userid, deviceid FROM public.keys WHERE deviceid = $1`
         const deviceResult = await authDb.query(selectDeviceQuery, [deviceId])
   
         // Case 2a: Session token provided

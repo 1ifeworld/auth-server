@@ -1,6 +1,5 @@
 import { app } from '../server'
 import { makeCid } from '../utils/helpers'
-import type {  } from '../utils/types'
 
 app.post('/generateCid', async (c) => {
   try {

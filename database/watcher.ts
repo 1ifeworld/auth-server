@@ -72,7 +72,7 @@ async function ensureTablesExist() {
         deviceid TEXT NOT NULL,
         publickey TEXT NOT NULL,
         encryptedprivatekey TEXT NOT NULL,
-        timestamp TEXT NOT NULL,
+        timestamp TIMESTAMP NOT NULL,
         PRIMARY KEY (userid, custodyAddress, deviceid)
       )
     `)

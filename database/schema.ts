@@ -35,7 +35,7 @@ export const keysTable = pgTable(
     deviceid: text('deviceid').notNull(),
     publickey: text('publickey').notNull(),
     encryptedprivatekey: text('encryptedprivatekey').notNull(),
-    timestamp: text('timestamp').notNull(), 
+    timestamp: timestamp('timestamp').notNull(), 
   },
   (table) => ({
     primaryKey: [table.userid, table.custodyAddress, table.deviceid],

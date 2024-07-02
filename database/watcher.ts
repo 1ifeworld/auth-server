@@ -1,5 +1,4 @@
 import pg from 'pg'
-import { app } from '../server'
 
 const { Client } = pg
 

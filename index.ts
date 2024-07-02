@@ -9,7 +9,7 @@ export const app = new Hono<{
 }>()
 
 export default {
-  port: 3000,
+  // port: 3000,
   fetch: app.fetch,
 }
 

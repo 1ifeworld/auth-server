@@ -2,6 +2,7 @@ import { app } from '../server'
 import { makeCid } from '../utils/helpers'
 
 app.post('/generateCid', async (c) => {
+    console.log("route hit")
   try {
     const { messageData } = await c.req.json()
 

@@ -4,7 +4,7 @@ export const usersTable = pgTable('users', {
   id: numeric('userid').primaryKey(),
   to: text('to'),
   recovery: text('recovery'),
-  timestamp: text('timestamp'),
+  timestamp: timestamp('timestamp'),
   log_addr: text('log_addr'),
   block_num: numeric('block_num'),
 })
@@ -13,12 +13,12 @@ export type InsertUser = typeof usersTable.$inferInsert
 export type SelectUser = typeof usersTable.$inferSelect
 
 export const sessionsTable = pgTable('sessions', {
-  id: numeric('id').primaryKey(),
+  id: text('id').primaryKey(),
   userId: numeric('userid')
     .notNull()
     .references(() => usersTable.id),
   deviceId: text('deviceid').notNull(),
-  created: timestamp('created'),
+  created: timestamp('created').notNull().defaultNow(),
   expiresAt: timestamp('expiresat').notNull(),
 })
 
@@ -35,7 +35,7 @@ export const keysTable = pgTable(
     deviceid: text('deviceid').notNull(),
     publickey: text('publickey').notNull(),
     encryptedprivatekey: text('encryptedprivatekey').notNull(),
-    timestamp: text('timestamp'),
+    timestamp: text('timestamp').notNull(),
   },
   (table) => ({
     primaryKey: [table.userid, table.custodyAddress, table.deviceid],

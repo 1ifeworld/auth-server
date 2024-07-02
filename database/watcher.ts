@@ -96,8 +96,6 @@ async function checkAndReplicateData() {
     const lastProcessedBlockNumber =
       maxBlockQueryResult.rows[0].max_block_number
 
-    console.log('Last processed block number:', lastProcessedBlockNumber)
-
     const queryResult = await listenClient.query(
       `
       SELECT userid, "to", recovery, timestamp, log_addr, block_num FROM users
@@ -106,9 +104,6 @@ async function checkAndReplicateData() {
     `,
       [lastProcessedBlockNumber],
     )
-
-    console.log('Rows to replicate:', queryResult.rows.length)
-
     if (queryResult.rows.length > 0) {
       const res = await authDb.query(
         `
@@ -122,9 +117,9 @@ async function checkAndReplicateData() {
           queryResult.rows.map((row) => row.userid),
           queryResult.rows.map((row) => row.to),
           queryResult.rows.map((row) => row.recovery),
-          queryResult.rows.map((row) =>
-            new Date(row.timestamp * 1000).toISOString(),
-          ),
+          queryResult.rows
+            .map((row) => new Date(row.timestamp * 1000).toISOString())
+            .toString(),
           queryResult.rows.map((row) => row.log_addr),
           queryResult.rows.map((row) => row.block_num),
         ],

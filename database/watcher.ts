@@ -2,8 +2,6 @@ import pg from 'pg'
 
 const { Client } = pg
 
-console.log('YO WATCHER')
-
 const listenConnectionString = process.env.LISTEN_DATABASE_URL!
 const authConnectionString = process.env.WRITE_DATABASE_URL!
 

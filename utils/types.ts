@@ -38,21 +38,22 @@ export type Message = {
   signer: string
   messageData: MessageData
   hashType: HashTypes
-  hash: Uint8Array
+  hash: string
   sigType: SignatureTypes
-  sig: Uint8Array
+  sig: string
 }
 
 export function isMessage(data: Message): data is Message {
   return (
     typeof data.signer === 'string' &&
     typeof data.messageData === 'object' &&
-    typeof data.hashType === 'string' &&
-    (data.hashType === 'sha256' || data.hashType === 'sha512') &&
-    data.hash instanceof Uint8Array &&
-    typeof data.sigType === 'string' &&
-    (data.sigType === 'ed25519' || data.sigType === 'secp256k1') &&
-    data.sig instanceof Uint8Array
+    typeof data.hashType === 'number' &&
+    (data.hashType === 0 || data.hashType === 1) &&
+    typeof data.hash === 'string' &&
+    typeof data.sigType === 'number' &&
+    (data.sigType === 1 || data.sigType === 2) &&
+    typeof data.sig === 'string' &&
+    /^0x[0-9a-fA-F]+$/.test(data.sig)
   )
 }
 

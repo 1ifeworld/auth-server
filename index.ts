@@ -1,12 +1,13 @@
 import { app } from './routes'
 
-console.log('initialized here: index')
+// Bun.serve({
+//   fetch: app.fetch,
+//   port: 3030,
+// })
 
-Bun.serve({
+export default {
+  port: 3000,
   fetch: app.fetch,
-  port: process.env.PORT || 3030,
-})
+}
 
-console.log(
-  `Hono server started on http://localhost:${process.env.PORT || 3030}`,
-)
+console.log('hi')

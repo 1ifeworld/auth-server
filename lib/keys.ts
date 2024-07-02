@@ -10,7 +10,6 @@ export const privKeyBytes = new Uint8Array(
   Buffer.from(USER_ID_1_PRIV_KEY, 'hex'),
 )
 export const USER_ID_1_PUB_KEY = ed25519.getPublicKey(USER_ID_1_PRIV_KEY)
-// const pubKeyBytes = new Uint8Array(Buffer.from(USER_ID_1_PUB_KEY, "hex"))
 
 export const publicKey = ed25519.getPublicKey(privKeyBytes)
 console.log({ publicKey })

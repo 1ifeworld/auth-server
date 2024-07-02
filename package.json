@@ -21,6 +21,7 @@
     "@lucia-auth/adapter-drizzle": "^1.0.7",
     "@noble/curves": "^1.4.0",
     "@noble/hashes": "^1.4.0",
+    "@scure/base": "^1.1.7",
     "@types/pg": "^8.11.6",
     "aws-sdk": "^2.1641.0",
     "drizzle": "^1.4.0",

@@ -1,16 +1,25 @@
 import { app } from '../server'
 import { kms } from '../clients/aws'
-import { writeClient } from '../database/watcher'
-import { KEY_REF } from '../lib/keys'
+import { authDb } from '../database/watcher'
 import { signMessageWithKey } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
+import type { Message } from '../utils/types'
+import { selectKeysQuery, selectSessionQuery } from '../lib/queries'
+import { makeCid } from '../utils/helpers'
+import { isMessage } from '../utils/types'
 
-app.post('/signWithSession', async (c) => {
+// opinionated message types
+
+app.post('/signMessage', async (c) => {
   try {
     const { sessionId, message } = await c.req.json()
 
     if (!sessionId || !message) {
       return c.json({ success: false, message: 'Missing parameters' }, 400)
+    }
+
+    if (!isMessage(message)) {
+      return c.json({ success: false, message: 'Invalid message format' }, 400)
     }
 
     const { session, user } = await lucia.validateSession(sessionId)
@@ -19,33 +28,29 @@ app.post('/signWithSession', async (c) => {
       return c.json({ success: false, message: 'Invalid session' }, 404)
     }
 
-    const selectSessionQuery = `
-      SELECT userid FROM public.sessions
-      WHERE id = $1
-    `
-    const sessionResult = await writeClient.query(selectSessionQuery, [
-      sessionId,
-    ])
-    console.log({ sessionResult })
-
-    if (sessionResult.rows.length === 0) {
-      return c.json({ success: false, message: 'Invalid session' }, 404)
-    }
+    const sessionResult = await authDb.query(selectSessionQuery, [sessionId])
 
     const { userid } = sessionResult.rows[0]
 
-    // Retrieve the stored encrypted keys
-    const selectKeysQuery = `
-      SELECT encryptedprivatekey FROM public.keys
-      WHERE userid = $1
-    `
-    const keysResult = await writeClient.query(selectKeysQuery, [userid])
+    if (userid !== message.messageData.rid) {
+      return
+    }
+    const keysResult = await authDb.query(selectKeysQuery, [userid])
 
     if (keysResult.rows.length === 0) {
       return c.json({ success: false, message: 'Keys not found' }, 404)
     }
 
-    const { encryptedprivatekey } = keysResult.rows[0]
+    const { encryptedprivatekey, publicKey } = keysResult.rows[0]
+
+    const computedCid = await makeCid(message.messageData)
+
+    console.log({ computedCid })
+    console.log({ messagehash: message.hash.toString() })
+
+    if (computedCid.toString() !== message.hash.toString()) {
+      return c.json({ success: false, message: 'Invalid message hash' }, 400)
+    }
 
     // Decrypt the private key using AWS KMS
     const decryptedPrivateKey = await kms
@@ -57,34 +62,20 @@ app.post('/signWithSession', async (c) => {
     if (!decryptedPrivateKey.Plaintext) {
       throw new Error('Decryption failed')
     }
-
-    // Sign the message with the decrypted EDDSA private key
     const eddsaPrivateKey = new Uint8Array(
       decryptedPrivateKey.Plaintext as ArrayBuffer,
     )
-    const signedMessage = signMessageWithKey(message, eddsaPrivateKey)
+    const signature = signMessageWithKey(
+      message.hash.toString(),
+      eddsaPrivateKey,
+    )
 
-    // Re-encrypt the private key using AWS KMS
-    const reEncryptedPrivateKey = await kms
-      .encrypt({
-        KeyId: KEY_REF,
-        Plaintext: Buffer.from(eddsaPrivateKey),
-      })
-      .promise()
-
-    if (!reEncryptedPrivateKey.CiphertextBlob) {
-      throw new Error('Re-encryption failed')
+    const signedMessage: Message = {
+      ...message,
+      signer: publicKey,
+      sigType: 1,
+      sig: new Uint8Array(Buffer.from(signature)),
     }
-
-    const updateKeysQuery = `
-      UPDATE public.keys
-      SET encryptedprivatekey = $1
-      WHERE userid = $2
-    `
-    await writeClient.query(updateKeysQuery, [
-      reEncryptedPrivateKey.CiphertextBlob.toString('base64'),
-      userid,
-    ])
 
     return c.json({
       success: true,

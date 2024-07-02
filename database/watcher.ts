@@ -12,7 +12,7 @@ export const listenClient = new Client({
   connectionString: listenConnectionString,
 })
 
-export const writeClient = new Client({
+export const authDb = new Client({
   connectionString: writeConnectionString,
 })
 
@@ -25,7 +25,7 @@ listenClient
 
 console.log({ listenClient })
 
-writeClient
+authDb
   .connect()
   .then(() => {
     console.log('Connected to Destination DB successfully')
@@ -38,14 +38,14 @@ writeClient
     ),
   )
 
-console.log({ writeClient })
+console.log({ authDb })
 
 async function ensureTablesExist() {
   try {
-    await writeClient.query('BEGIN')
+    await authDb.query('BEGIN')
 
     // Create users table
-    await writeClient.query(`
+    await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.users (
         userid TEXT PRIMARY KEY,
         "to" TEXT,
@@ -57,7 +57,7 @@ async function ensureTablesExist() {
     `)
 
     // Create sessions table
-    await writeClient.query(`
+    await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.sessions (
         id TEXT PRIMARY KEY,
         userid TEXT NOT NULL REFERENCES public.users(userid),
@@ -68,7 +68,7 @@ async function ensureTablesExist() {
     `)
 
     // Create keys table
-    await writeClient.query(`
+    await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.keys (
         userid TEXT NOT NULL REFERENCES public.users(userid),
         custodyAddress TEXT NOT NULL,
@@ -79,10 +79,10 @@ async function ensureTablesExist() {
       )
     `)
 
-    await writeClient.query('COMMIT')
+    await authDb.query('COMMIT')
     console.log('Schema and tables verified/created successfully')
   } catch (err) {
-    await writeClient.query('ROLLBACK')
+    await authDb.query('ROLLBACK')
     console.error(
       'Error in schema/table creation in destination DB:',
       (err as Error).stack,
@@ -92,7 +92,7 @@ async function ensureTablesExist() {
 
 async function checkAndReplicateData() {
   try {
-    const maxBlockQueryResult = await writeClient.query(`
+    const maxBlockQueryResult = await authDb.query(`
       SELECT COALESCE(MAX(block_num), 0) as max_block_number FROM public.users
     `)
     const lastProcessedBlockNumber =
@@ -108,7 +108,7 @@ async function checkAndReplicateData() {
     )
 
     if (queryResult.rows.length > 0) {
-      const res = await writeClient.query(
+      const res = await authDb.query(
         `
   INSERT INTO public.users (userid, "to", recovery, timestamp, log_addr, block_num)
   SELECT * FROM unnest($1::NUMERIC[], $2::TEXT[], $3::TEXT[], $4::TIMESTAMP[], $5::TEXT[], $6::NUMERIC[])
@@ -136,7 +136,7 @@ setInterval(checkAndReplicateData, 1000)
 
 process.on('SIGINT', () => {
   console.log('yo sigint')
-  Promise.all([listenClient.end(), writeClient.end()])
+  Promise.all([listenClient.end(), authDb.end()])
     .then(() => {
       console.log('Both clients disconnected')
       process.exit()

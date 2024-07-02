@@ -1,7 +1,7 @@
 import { signMessage } from '../lib/signatures'
 import { app } from '../server'
 
-app.post('/sign', async (c) => {
+app.post('/signArbitrary', async (c) => {
   try {
     const { message } = await c.req.json()
 

@@ -25,18 +25,18 @@ app.use(
     exposeHeaders: ['Content-Length'],
     maxAge: 600,
     credentials: true,
-  })
+  }),
 )
 
 // Session and user handling middleware
-app.use('*', async (c, next) => { 
+app.use('*', async (c, next) => {
   const sessionId = getCookie(c, lucia.sessionCookieName) ?? null
   console.log('Session ID:', sessionId)
 
   if (!sessionId) {
     c.set('user', null)
     c.set('session', null)
-    console.log("No session ID found, setting user and session to null")
+    console.log('No session ID found, setting user and session to null')
     return next()
   }
 
@@ -47,14 +47,14 @@ app.use('*', async (c, next) => {
     c.header('Set-Cookie', lucia.createSessionCookie(session.id).serialize(), {
       append: true,
     })
-    console.log("Session is fresh, setting session cookie")
+    console.log('Session is fresh, setting session cookie')
   } else if (!session) {
     c.header('Set-Cookie', lucia.createBlankSessionCookie().serialize(), {
       append: true,
     })
-    console.log("No valid session found, setting blank session cookie")
+    console.log('No valid session found, setting blank session cookie')
   }
-  
+
   c.set('user', user)
   c.set('session', session)
   return next()

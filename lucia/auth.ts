@@ -48,7 +48,6 @@ export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
       timestamp: databaseUserAttributes.timestamp,
     }
   },
-  
 })
 
 declare module 'lucia' {

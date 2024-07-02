@@ -1,5 +1,5 @@
 import { alphabet, generateRandomString } from 'oslo/crypto'
-import { writeClient } from '../database/watcher'
+import { authDb } from '../database/watcher'
 import { custodyAddress, publicKey } from '../lib/keys'
 import { verifyMessage } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
@@ -29,7 +29,7 @@ export interface AuthReq {
 //     const { message, signature } = siweMsg
 
 //     const selectDeviceQuery = `SELECT userid, deviceid FROM public.keys WHERE deviceid = $1`
-//     const deviceResult = await writeClient.query(selectDeviceQuery, [deviceId])
+//     const deviceResult = await authDb.query(selectDeviceQuery, [deviceId])
 //     console.log({deviceResult})
 
 //     let userId
@@ -111,7 +111,7 @@ export interface AuthReq {
 //         VALUES ($1, $2, $3)
 //       `
 
-//       await writeClient.query(insertKeysQuery, [
+//       await authDb.query(insertKeysQuery, [
 //         userId,
 //         custodyAddress,
 //         newDeviceId,
@@ -192,18 +192,12 @@ app.post('/provisionSession', async (c) => {
           INSERT INTO public.keys (userid, custodyAddress, deviceid)
           VALUES ($1, $2, $3)
         `
-      await writeClient.query(insertKeysQuery, [
-        userId,
-        custodyAddress,
-        newDeviceId,
-      ])
+      await authDb.query(insertKeysQuery, [userId, custodyAddress, newDeviceId])
     }
     // Case 2: Device ID provided
     else {
       const selectDeviceQuery = `SELECT userid, deviceid FROM public.keys WHERE deviceid = $1`
-      const deviceResult = await writeClient.query(selectDeviceQuery, [
-        deviceId,
-      ])
+      const deviceResult = await authDb.query(selectDeviceQuery, [deviceId])
 
       // Case 2a: Session token provided
       if (sessionId) {
@@ -248,7 +242,7 @@ app.post('/provisionSession', async (c) => {
               INSERT INTO public.keys (userid, custodyAddress, deviceid)
               VALUES ($1, $2, $3)
             `
-          await writeClient.query(insertKeysQuery, [
+          await authDb.query(insertKeysQuery, [
             userId,
             custodyAddress,
             newDeviceId,

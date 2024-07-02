@@ -5,7 +5,7 @@ import {
   generateRandomString,
 } from 'oslo/crypto'
 import { kms } from '../clients/aws'
-import { writeClient } from '../database/watcher'
+import { authDb } from '../database/watcher'
 import { KEY_REF, publicKey } from '../lib/keys'
 import { verifyMessage } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
@@ -36,7 +36,7 @@ app.post('/genKeys', async (c) => {
         SELECT userid FROM public.keys
         WHERE custodyAddress = $1
       `
-    const hashResult = await writeClient.query(selectHashQuery, [publicKeyHex])
+    const hashResult = await authDb.query(selectHashQuery, [publicKeyHex])
 
     console.log({ hashResult })
     const userId = generateRandomInteger(100)
@@ -60,10 +60,7 @@ app.post('/genKeys', async (c) => {
         })
         .promise()
 
-      if (
-        !encryptedPrivateKey.CiphertextBlob ||
-        !eddsaPublicKey.toString()
-      ) {
+      if (!encryptedPrivateKey.CiphertextBlob || !eddsaPublicKey.toString()) {
         throw new Error('Encryption failed')
       }
 
@@ -74,7 +71,7 @@ app.post('/genKeys', async (c) => {
           VALUES ($1, $2, $3, $4, $5)
         `
 
-      await writeClient.query(insertKeysQuery, [
+      await authDb.query(insertKeysQuery, [
         userId,
         publicKeyHex,
         deviceId,
@@ -82,7 +79,7 @@ app.post('/genKeys', async (c) => {
         Buffer.from(eddsaPublicKey).toString('hex'),
       ])
 
-      console.log({encrypted: eddsaPublicKey.toString()})
+      console.log({ encrypted: eddsaPublicKey.toString() })
 
       const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
       const created = new Date(Date.now())

@@ -1,9 +1,12 @@
-import { app } from './routes'
+import { Hono } from "hono"
+import type { Session, User } from 'lucia'
 
-// Bun.serve({
-//   fetch: app.fetch,
-//   port: 3030,
-// })
+export const app = new Hono<{
+  Variables: {
+    user: User | null
+    session: Session | null
+  }
+}>()
 
 export default {
   port: 3000,

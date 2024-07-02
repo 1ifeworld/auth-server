@@ -23,6 +23,7 @@ import { KEY_REF } from './lib/keys'
 import { custodyAddress, publicKey } from './lib/keys'
 import { verifyMessage } from './lib/signatures'
 import type { Hex } from '@noble/curves/abstract/utils'
+import { app } from '.'
 
 export interface AuthReq {
   deviceId: string
@@ -34,13 +35,6 @@ export interface AuthReq {
   }
 }
 
-
-export const app = new Hono<{
-  Variables: {
-    user: User | null
-    session: Session | null
-  }
-}>()
 
 // Cross Site Request Forgery (CSRF) protection middleware
 // app.use(csrf())

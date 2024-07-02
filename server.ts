@@ -23,7 +23,21 @@ import { KEY_REF } from './lib/keys'
 import { custodyAddress, publicKey } from './lib/keys'
 import { verifyMessage } from './lib/signatures'
 import type { Hex } from '@noble/curves/abstract/utils'
-import { app } from '.'
+
+export const app = new Hono<{
+  Variables: {
+    user: User | null
+    session: Session | null
+  }
+}>()
+
+export default {
+  // port: 3000,
+  fetch: app.fetch,
+}
+
+console.log('hi')
+
 
 export interface AuthReq {
   deviceId: string
@@ -34,7 +48,6 @@ export interface AuthReq {
     signature: Uint8Array
   }
 }
-
 
 // Cross Site Request Forgery (CSRF) protection middleware
 // app.use(csrf())

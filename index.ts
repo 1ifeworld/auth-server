@@ -8,6 +8,8 @@ export const app = new Hono<{
   }
 }>()
 
+import './routes'
+
 export default {
   fetch: app.fetch
 }

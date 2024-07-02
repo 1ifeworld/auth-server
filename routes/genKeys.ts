@@ -9,7 +9,7 @@ import { authDb } from '../database/watcher'
 import { KEY_REF, publicKey } from '../lib/keys'
 import { verifyMessage } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
-import { app } from '../server'
+import { app } from '../index'
 
 app.post('/genKeys', async (c) => {
   try {

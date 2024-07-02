@@ -1,4 +1,4 @@
-import { app } from '../server'
+import { app } from '../index'
 import { makeCid } from '../utils/helpers'
 
 app.post('/generateCid', async (c) => {

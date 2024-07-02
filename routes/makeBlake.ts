@@ -1,6 +1,6 @@
 import { blake3 } from '@noble/hashes/blake3'
 import { messageDataToUint8Array } from '../buffers/buffers'
-import { app } from '../server'
+import { app } from '../index'
 
 app.post('/makeBlake', async (c) => {
   console.log('route hit')

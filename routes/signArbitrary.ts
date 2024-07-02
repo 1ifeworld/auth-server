@@ -1,5 +1,5 @@
 // import { signMessage } from '../lib/signatures'
-// import { app } from '../server'
+// import { app } from '../index'
 
 // app.post('/signArbitrary', async (c) => {
 //   try {

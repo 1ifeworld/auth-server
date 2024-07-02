@@ -7,7 +7,7 @@ import { authDb } from '../database/watcher'
 import { selectKeysQuery, selectSessionQuery } from '../lib/queries'
 import { signMessageWithKey } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
-import { app } from '../server'
+import { app } from '../index'
 import type { Message } from '../utils/types'
 import { isMessage } from '../utils/types'
 
@@ -73,6 +73,10 @@ app.post('/signMessage', async (c) => {
     const signature = signMessageWithKey(message.hash, eddsaPrivateKey)
     const signerUInt8Array = ed25519.getPublicKey(eddsaPrivateKey)
     const signer = Buffer.from(signerUInt8Array).toString('hex')
+
+    if (publickey !== signer) {
+        return 
+    }
 
     const signedMessage: Message = {
       signer: signer,

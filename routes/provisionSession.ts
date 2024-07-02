@@ -4,7 +4,7 @@ import { custodyAddress, publicKey } from '../lib/keys'
 import { selectDeviceQuery } from '../lib/queries'
 import { verifyMessage } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
-import { app } from '../server'
+import { app } from '../index'
 
 app.post('/provisionSession', async (c) => {
   try {

@@ -27,6 +27,7 @@ import { KEY_REF } from './lib/keys'
 import { custodyAddress, publicKey } from './lib/keys'
 import { verifyMessage } from './lib/signatures'
 import type { Hex } from '@noble/curves/abstract/utils'
+import { messageDataToUint8Array } from './buffers/buffers'
 
 export const app = new Hono<{
   Variables: {
@@ -186,8 +187,11 @@ app.post('/signMessage', async (c) => {
 
     console.log('HRE', publickey)
 
-    const computedHash = blake3(JSON.stringify(message.messageData))
+    const computedHash = blake3(messageDataToUint8Array(message.messageData))
+
     const computedHashBase64 = base64.encode(computedHash)
+    console.log({computedHashBase64})
+    console.log({messagehash: message.hash})
 
     if (computedHashBase64 !== message.hash) {
       return c.json({ success: false, message: 'Invalid message hash' }, 400)
@@ -246,14 +250,14 @@ app.post('/makeBlake', async (c) => {
       )
     }
     // HUGE IMPORTANT FLAG THAT WE'RE STRINGIFYING THE MESSAGE DATA OBJECTTTTT
-    const hash = await blake3(JSON.stringify(messageData))
-    const hashBase64 = base64.encode(hash)
-    console.log({ hashBase64 })
+    const hash = await blake3(messageDataToUint8Array(messageData))
+    console.log({hash})
+    // console.log({ hashBase64 })
 
     return c.json({
       success: true,
       messageData,
-      hash: hashBase64,
+      hash: hash,
     })
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred'

@@ -9,7 +9,11 @@ import { kms } from './clients/aws'
 import { authDb } from './database/watcher'
 import { signMessageWithKey } from './lib/signatures'
 import type { Message } from './utils/types'
-import { selectKeysQuery, selectSessionQuery, selectDeviceQuery } from './lib/queries'
+import {
+  selectKeysQuery,
+  selectSessionQuery,
+  selectDeviceQuery,
+} from './lib/queries'
 import { isMessage } from './utils/types'
 import { blake3 } from '@noble/hashes/blake3'
 import { base64 } from '@scure/base'
@@ -37,7 +41,6 @@ export default {
 }
 
 console.log('hi')
-
 
 export interface AuthReq {
   deviceId: string
@@ -110,24 +113,18 @@ export interface AuthReq {
 // })
 
 app.get('/', async (c) => {
-  console.log('YIO')
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Welcome</title>
+      <title>dimelo</title>
     </head>
-    <body>
-      <h1>Welcome to the Hono Server</h1>
-      <p>This is the root route. Your server is running correctly.</p>
-    </body>
     </html>
   `
   return c.html(htmlContent)
 })
 
 app.post('/generateCid', async (c) => {
-  console.log('route hit')
   try {
     const { messageData } = await c.req.json()
 
@@ -192,8 +189,6 @@ app.post('/signMessage', async (c) => {
     const computedHash = blake3(JSON.stringify(message.messageData))
     const computedHashBase64 = base64.encode(computedHash)
 
-
-
     if (computedHashBase64 !== message.hash) {
       return c.json({ success: false, message: 'Invalid message hash' }, 400)
     }
@@ -215,7 +210,6 @@ app.post('/signMessage', async (c) => {
     const signature = signMessageWithKey(message.hash, eddsaPrivateKey)
     const signerUInt8Array = ed25519.getPublicKey(eddsaPrivateKey)
     const signer = Buffer.from(signerUInt8Array).toString('hex')
-
 
     const signedMessage: Message = {
       signer: signer,
@@ -241,61 +235,108 @@ app.post('/signMessage', async (c) => {
 })
 
 app.post('/makeBlake', async (c) => {
-    console.log('route hit')
-    try {
-      const { messageData } = await c.req.json()
-  
-      if (!messageData || typeof messageData !== 'object') {
-        return c.json(
-          { success: false, message: 'Invalid or missing messageData' },
-          400,
-        )
-      }
-      // HUGE IMPORTANT FLAG THAT WE'RE STRINGIFYING THE MESSAGE DATA OBJECTTTTT
-      const hash = await blake3(JSON.stringify(messageData))
-      const hashBase64 = base64.encode(hash)
-      console.log({ hashBase64 })
-    
-      return c.json({
-        success: true,
-        messageData,
-        hash: hashBase64,
-      })
-      
-    } catch (error: unknown) {
-      let errorMessage = 'An unknown error occurred'
-      if (error instanceof Error) {
-        errorMessage = error.message
-      }
-      return c.json({ success: false, message: errorMessage }, 500)
-    }
-  })
+  console.log('route hit')
+  try {
+    const { messageData } = await c.req.json()
 
-  app.post('/provisionSession', async (c) => {
-    try {
-      const { deviceId, sessionId, siweMsg } = await c.req.json()
-  
-      console.log('Received', deviceId, sessionId, siweMsg)
-  
-      if (!siweMsg && !sessionId) {
+    if (!messageData || typeof messageData !== 'object') {
+      return c.json(
+        { success: false, message: 'Invalid or missing messageData' },
+        400,
+      )
+    }
+    // HUGE IMPORTANT FLAG THAT WE'RE STRINGIFYING THE MESSAGE DATA OBJECTTTTT
+    const hash = await blake3(JSON.stringify(messageData))
+    const hashBase64 = base64.encode(hash)
+    console.log({ hashBase64 })
+
+    return c.json({
+      success: true,
+      messageData,
+      hash: hashBase64,
+    })
+  } catch (error: unknown) {
+    let errorMessage = 'An unknown error occurred'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    return c.json({ success: false, message: errorMessage }, 500)
+  }
+})
+
+app.post('/provisionSession', async (c) => {
+  try {
+    const { deviceId, sessionId, siweMsg } = await c.req.json()
+
+    console.log('Received', deviceId, sessionId, siweMsg)
+
+    if (!siweMsg && !sessionId) {
+      return c.json(
+        { success: false, message: 'Missing SIWE message or session ID' },
+        400,
+      )
+    }
+
+    let userId
+    let newDeviceId = deviceId
+
+    // Case 1: No device ID (New User)
+    if (!deviceId) {
+      if (!siweMsg) {
         return c.json(
-          { success: false, message: 'Missing SIWE message or session ID' },
+          { success: false, message: 'Missing SIWE message for new user' },
           400,
         )
       }
-  
-      let userId
-      let newDeviceId = deviceId
-  
-      // Case 1: No device ID (New User)
-      if (!deviceId) {
+
+      const { message, signature } = siweMsg
+      const isValid = verifyMessage(
+        message,
+        signature,
+        Buffer.from(publicKey).toString('hex'),
+      )
+      if (!isValid) {
+        return c.json({ success: false, message: 'Invalid signature' }, 400)
+      }
+
+      newDeviceId = generateRandomString(
+        10,
+        alphabet('a-z', 'A-Z', '0-9', '-', '_'),
+      )
+      userId = 10
+
+      const insertKeysQuery = `
+            INSERT INTO public.keys (userid, custodyAddress, deviceid)
+            VALUES ($1, $2, $3)
+          `
+      await authDb.query(insertKeysQuery, [userId, custodyAddress, newDeviceId])
+    }
+    // Case 2: Device ID provided
+    else {
+      const deviceResult = await authDb.query(selectDeviceQuery, [deviceId])
+
+      // Case 2a: Session token provided
+      if (sessionId) {
+        const { session } = await lucia.validateSession(sessionId)
+        if (!session || session.deviceId !== deviceId) {
+          return c.json({ success: false, message: 'Invalid session' }, 404)
+        }
+        return c.json({
+          success: true,
+          userId: deviceResult.rows[0].userid,
+          sessionId: session.id,
+          deviceId: deviceResult.rows[0].deviceid,
+        })
+      }
+      // Case 2b: No session token, verify SIWE
+      else {
         if (!siweMsg) {
           return c.json(
-            { success: false, message: 'Missing SIWE message for new user' },
+            { success: false, message: 'Missing SIWE message' },
             400,
           )
         }
-  
+
         const { message, signature } = siweMsg
         const isValid = verifyMessage(
           message,
@@ -305,106 +346,57 @@ app.post('/makeBlake', async (c) => {
         if (!isValid) {
           return c.json({ success: false, message: 'Invalid signature' }, 400)
         }
-  
-        newDeviceId = generateRandomString(
-          10,
-          alphabet('a-z', 'A-Z', '0-9', '-', '_'),
-        )
-        userId = 10
-  
-        const insertKeysQuery = `
-            INSERT INTO public.keys (userid, custodyAddress, deviceid)
-            VALUES ($1, $2, $3)
-          `
-        await authDb.query(insertKeysQuery, [userId, custodyAddress, newDeviceId])
-      }
-      // Case 2: Device ID provided
-      else {
-        const deviceResult = await authDb.query(selectDeviceQuery, [deviceId])
-  
-        // Case 2a: Session token provided
-        if (sessionId) {
-          const { session } = await lucia.validateSession(sessionId)
-          if (!session || session.deviceId !== deviceId) {
-            return c.json({ success: false, message: 'Invalid session' }, 404)
-          }
-          return c.json({
-            success: true,
-            userId: deviceResult.rows[0].userid,
-            sessionId: session.id,
-            deviceId: deviceResult.rows[0].deviceid,
-          })
-        }
-        // Case 2b: No session token, verify SIWE
-        else {
-          if (!siweMsg) {
-            return c.json(
-              { success: false, message: 'Missing SIWE message' },
-              400,
-            )
-          }
-  
-          const { message, signature } = siweMsg
-          const isValid = verifyMessage(
-            message,
-            signature,
-            Buffer.from(publicKey).toString('hex'),
+
+        if (deviceResult.rows.length === 0) {
+          newDeviceId = generateRandomString(
+            10,
+            alphabet('a-z', 'A-Z', '0-9', '-', '_'),
           )
-          if (!isValid) {
-            return c.json({ success: false, message: 'Invalid signature' }, 400)
-          }
-  
-          if (deviceResult.rows.length === 0) {
-            newDeviceId = generateRandomString(
-              10,
-              alphabet('a-z', 'A-Z', '0-9', '-', '_'),
-            )
-            userId = 25 // Fixed user ID for new devices
-  
-            const insertKeysQuery = `
+          userId = 25 // Fixed user ID for new devices
+
+          const insertKeysQuery = `
                 INSERT INTO public.keys (userid, custodyAddress, deviceid)
                 VALUES ($1, $2, $3)
               `
-            await authDb.query(insertKeysQuery, [
-              userId,
-              custodyAddress,
-              newDeviceId,
-            ])
-          } else {
-            userId = deviceResult.rows[0].userid
-          }
+          await authDb.query(insertKeysQuery, [
+            userId,
+            custodyAddress,
+            newDeviceId,
+          ])
+        } else {
+          userId = deviceResult.rows[0].userid
         }
       }
-  
-      // Create new session for cases 1 and 2b
-      const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
-      const created = new Date(Date.now())
-      const session = await lucia.createSession(userId.toString(), {
-        userId,
-        deviceId: newDeviceId,
-        expiresAt,
-        created,
-      })
-  
-      const sessionCookie = lucia.createSessionCookie(session.id)
-      console.log({ sessionCookie })
-      c.header('Set-Cookie', sessionCookie.serialize(), { append: true })
-  
-      return c.json({
-        success: true,
-        userId,
-        sessionId: session.id,
-        deviceId: newDeviceId,
-      })
-    } catch (error: unknown) {
-      let errorMessage = 'An unknown error occurred'
-      if (error instanceof Error) {
-        errorMessage = error.message
-      }
-      return c.json({ success: false, message: errorMessage }, 500)
     }
-  })
 
+    // Create new session for cases 1 and 2b
+    const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
+    const created = new Date(Date.now())
+    const session = await lucia.createSession(userId.toString(), {
+      userId,
+      deviceId: newDeviceId,
+      expiresAt,
+      created,
+    })
+
+    const sessionCookie = lucia.createSessionCookie(session.id)
+    console.log({ sessionCookie })
+    c.header('Set-Cookie', sessionCookie.serialize(), { append: true })
+
+    return c.json({
+      success: true,
+      userId,
+      sessionId: session.id,
+      deviceId: newDeviceId,
+    })
+  } catch (error: unknown) {
+    let errorMessage = 'An unknown error occurred'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    return c.json({ success: false, message: errorMessage }, 500)
+  }
+})
 
 app.post('/genKeys', async (c) => {
   console.log('IN ENCRYPT ROUTE')
@@ -533,5 +525,3 @@ app.post('/genKeys', async (c) => {
     return c.json({ success: false, message: errorMessage }, 500)
   }
 })
-  
-  

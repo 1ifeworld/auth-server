@@ -5,20 +5,20 @@
 //     console.log('route hit')
 //     try {
 //       const { messageData } = await c.req.json()
-  
+
 //       if (!messageData || typeof messageData !== 'object') {
 //         return c.json(
 //           { success: false, message: 'Invalid or missing messageData' },
 //           400,
 //         )
 //       }
-  
+
 //       const messageBytes = new Uint8Array(Buffer.from(messageData))
 
 //       const hash = await blake3(messageBytes)
 //       console.log({hash})
 //       console.log({hash: hash.toString()})
-  
+
 //       return c.json({
 //         success: true,
 //         messageData,
@@ -32,4 +32,3 @@
 //       return c.json({ success: false, message: errorMessage }, 500)
 //     }
 //   })
-  

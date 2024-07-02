@@ -1,3 +1,4 @@
+import type { Hex } from '@noble/curves/abstract/utils'
 /*
  *
  *   MESSAGE TYPES
@@ -242,6 +243,16 @@ export type UserSetNameBody = {
 export type UserSetUriBody = {
   rid: bigint
   uri: string
+}
+
+export interface AuthReq {
+  deviceId: string
+  sessionId: string
+  siweMsg: {
+    custodyAddress: Hex
+    message: string
+    signature: Uint8Array
+  }
 }
 
 /*

@@ -1,7 +1,7 @@
-import type { MessageData } from './types'
 import * as dagCbor from '@ipld/dag-cbor'
 import * as Block from 'multiformats/block'
 import { sha256 } from 'multiformats/hashes/sha2'
+import type { MessageData } from './types'
 
 export async function makeCid(messageData: MessageData) {
   const block = await Block.encode({

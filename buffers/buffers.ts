@@ -1,7 +1,6 @@
-
-import { blake3 } from "@noble/hashes/blake3"
-import { base64url } from "@scure/base"
-import type { MessageData } from "../utils/types"
+import { blake3 } from '@noble/hashes/blake3'
+import { base64url } from '@scure/base'
+import type { MessageData } from '../utils/types'
 
 /**
  * @dev Serialize MessageData object into a Uint8Array
@@ -11,7 +10,7 @@ import type { MessageData } from "../utils/types"
 
 export function messageDataToUint8Array(message: MessageData): Uint8Array {
   const jsonString = JSON.stringify(message, (key, value) =>
-    typeof value === "bigint" ? value.toString() : value
+    typeof value === 'bigint' ? value.toString() : value,
   )
   const encoder = new TextEncoder()
   return encoder.encode(jsonString)
@@ -25,7 +24,7 @@ export function uint8ArrayToMessageData(uint8Array: Uint8Array): MessageData {
   const decoder = new TextDecoder()
   const jsonString = decoder.decode(uint8Array)
   return JSON.parse(jsonString, (key, value) =>
-    key === "rid" || key === "timestamp" ? BigInt(value) : value
+    key === 'rid' || key === 'timestamp' ? BigInt(value) : value,
   )
 }
 

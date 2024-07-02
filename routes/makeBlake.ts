@@ -1,7 +1,9 @@
+import { blake3 } from '@noble/hashes/blake3'
+import { messageDataToUint8Array } from '../buffers/buffers'
 import { app } from '../server'
-import { makeCid } from '../utils/helpers'
 
-app.post('/generateCid', async (c) => {
+app.post('/makeBlake', async (c) => {
+  console.log('route hit')
   try {
     const { messageData } = await c.req.json()
 
@@ -11,13 +13,12 @@ app.post('/generateCid', async (c) => {
         400,
       )
     }
-
-    const cid = await makeCid(messageData)
+    const hash = await blake3(messageDataToUint8Array(messageData))
 
     return c.json({
       success: true,
       messageData,
-      cid: cid.toString(),
+      hash: hash,
     })
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred'

@@ -1,7 +1,7 @@
-// import './signMessage'
-// import './genKeysAndSession'
-// import './SignWithSession'
-// import './provisionSession'
-// import { app } from '../server'
+import './signMessage'
+import './genKeysAndSession'
+import './SignWithSession'
+import './provisionSession'
+import { app } from '../server'
 
-// export { app }
+export { app }

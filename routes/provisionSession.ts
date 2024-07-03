@@ -1,11 +1,11 @@
+import { base16 } from '@scure/base'
 import { alphabet, generateRandomString } from 'oslo/crypto'
 import { app } from '../app'
 import { authDb } from '../database/watcher'
 import { custodyAddress, publicKey } from '../lib/keys'
-import { selectDeviceQuery, insertKeysQuery } from '../lib/queries'
-import { verifyMessage } from '../utils/signatures'
+import { insertKeysQuery, selectDeviceQuery } from '../lib/queries'
 import { lucia } from '../lucia/auth'
-import { base16 } from '@scure/base'
+import { verifyMessage } from '../utils/signatures'
 
 app.post('/provisionSession', async (c) => {
   try {
@@ -77,11 +77,7 @@ app.post('/provisionSession', async (c) => {
     }
 
     const { message, signature } = siweMsg
-    const isValid = verifyMessage(
-      message,
-      signature,
-      base16.encode(publicKey),
-    )
+    const isValid = verifyMessage(message, signature, base16.encode(publicKey))
     if (!isValid) {
       return c.json({ success: false, message: 'Invalid signature' }, 400)
     }

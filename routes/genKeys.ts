@@ -1,4 +1,5 @@
 import { ed25519 } from '@noble/curves/ed25519'
+import { base16 } from '@scure/base'
 import {
   alphabet,
   generateRandomInteger,
@@ -8,9 +9,8 @@ import { app } from '../app'
 import { kms } from '../clients/aws'
 import { authDb } from '../database/watcher'
 import { KEY_REF, publicKey } from '../lib/keys'
-import { verifyMessage } from '../utils/signatures'
 import { lucia } from '../lucia/auth'
-import { base16 } from '@scure/base'
+import { verifyMessage } from '../utils/signatures'
 
 app.post('/genKeys', async (c) => {
   try {
@@ -61,9 +61,9 @@ app.post('/genKeys', async (c) => {
         })
         .promise()
 
-        if (!encryptedPrivateKey.CiphertextBlob || !eddsaPublicKey) {
-            throw new Error('Encryption failed')
-          }
+      if (!encryptedPrivateKey.CiphertextBlob || !eddsaPublicKey) {
+        throw new Error('Encryption failed')
+      }
 
       console.log('prestorekeys', { userId, publicKeyHex })
 
@@ -72,7 +72,7 @@ app.post('/genKeys', async (c) => {
           VALUES ($1, $2, $3, $4, $5)
         `
 
-          // need to do it this way for encryptedPrivateKey.CiphertextBlob because of ciphertext type
+      // need to do it this way for encryptedPrivateKey.CiphertextBlob because of ciphertext type
       await authDb.query(insertKeysQuery, [
         userId,
         publicKeyHex,

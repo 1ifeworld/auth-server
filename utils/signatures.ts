@@ -2,11 +2,10 @@ import { ed25519 } from '@noble/curves/ed25519'
 import { base16 } from '@scure/base'
 
 export function signWithEddsaKey(
-  message: string,
+  message: Uint8Array,
   privateKey: Uint8Array,
 ): Uint8Array {
-  const msg = new TextEncoder().encode(message)
-  const sig = ed25519.sign(msg, privateKey)
+  const sig = ed25519.sign(message, privateKey)
 
   return sig
 }

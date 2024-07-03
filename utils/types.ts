@@ -1,4 +1,5 @@
-import type { Hex } from '@noble/curves/abstract/utils'
+import type { Hex } from 'viem'
+
 /*
  *
  *   MESSAGE TYPES
@@ -36,13 +37,18 @@ export enum SignatureTypes {
 }
 
 export type Message = {
-  signer: string
+  signer: Hex
   messageType: MessageTypes
   messageData: MessageData
   hashType: HashTypes
   hash: Uint8Array
   sigType: SignatureTypes
   sig: Uint8Array
+}
+
+export type RequestPayload = {
+  sessionId: string
+  messages: Message[]
 }
 
 export function isMessage(data: Message): data is Message {

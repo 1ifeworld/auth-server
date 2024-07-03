@@ -91,7 +91,7 @@ app.post('/signMessages', async (c) => {
         messageData: message.messageData,
         hashType: message.hashType,
         hash: message.hash,
-        sigType: 1,
+        sigType: message.sigType,
         sig: signature,
       }
 

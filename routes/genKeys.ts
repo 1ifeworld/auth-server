@@ -10,6 +10,7 @@ import { authDb } from '../database/watcher'
 import { KEY_REF, publicKey } from '../lib/keys'
 import { verifyMessage } from '../utils/signatures'
 import { lucia } from '../lucia/auth'
+import { base16 } from '@scure/base'
 
 app.post('/genKeys', async (c) => {
   try {
@@ -21,7 +22,7 @@ app.post('/genKeys', async (c) => {
     const isValid = verifyMessage(
       message,
       signedMessage,
-      Buffer.from(publicKey).toString('hex'),
+      base16.encode(publicKey),
     )
     if (!isValid) {
       return c.json({ success: false, message: 'Invalid signature' }, 400)
@@ -29,7 +30,7 @@ app.post('/genKeys', async (c) => {
 
     console.log({ isValid })
 
-    const publicKeyHex = Buffer.from(publicKey).toString('hex')
+    const publicKeyHex = base16.encode(publicKey)
 
     const selectHashQuery = `
         SELECT userid FROM public.keys
@@ -56,13 +57,13 @@ app.post('/genKeys', async (c) => {
       const encryptedPrivateKey = await kms
         .encrypt({
           KeyId: KEY_REF,
-          Plaintext: Buffer.from(eddsaPrivateKey),
+          Plaintext: eddsaPrivateKey,
         })
         .promise()
 
-      if (!encryptedPrivateKey.CiphertextBlob || !eddsaPublicKey.toString()) {
-        throw new Error('Encryption failed')
-      }
+        if (!encryptedPrivateKey.CiphertextBlob || !eddsaPublicKey) {
+            throw new Error('Encryption failed')
+          }
 
       console.log('prestorekeys', { userId, publicKeyHex })
 
@@ -71,12 +72,13 @@ app.post('/genKeys', async (c) => {
           VALUES ($1, $2, $3, $4, $5)
         `
 
+          // need to do it this way for encryptedPrivateKey.CiphertextBlob because of ciphertext type
       await authDb.query(insertKeysQuery, [
         userId,
         publicKeyHex,
         deviceId,
         encryptedPrivateKey.CiphertextBlob.toString('base64'),
-        Buffer.from(eddsaPublicKey).toString('hex'),
+        base16.encode(eddsaPublicKey),
       ])
 
       console.log({ encrypted: eddsaPublicKey.toString() })

@@ -1,5 +1,5 @@
 import { ed25519 } from '@noble/curves/ed25519'
-import type { Message } from '../utils/types'
+import { base16 } from '@scure/base'
 
 export function signWithEddsaKey(
   message: string,
@@ -17,7 +17,7 @@ export function verifyMessage(
   pubKey: string,
 ): boolean {
   const msg = new TextEncoder().encode(message)
-  const sig = Buffer.from(signedMessage, 'hex')
-  const pub = Buffer.from(pubKey, 'hex')
+  const sig = base16.decode(signedMessage)
+  const pub = base16.decode(pubKey)
   return ed25519.verify(sig, msg, pub)
 }

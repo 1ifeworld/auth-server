@@ -5,6 +5,7 @@ import { custodyAddress, publicKey } from '../lib/keys'
 import { selectDeviceQuery, insertKeysQuery } from '../lib/queries'
 import { verifyMessage } from '../utils/signatures'
 import { lucia } from '../lucia/auth'
+import { base16 } from '@scure/base'
 
 app.post('/provisionSession', async (c) => {
   try {
@@ -37,7 +38,7 @@ app.post('/provisionSession', async (c) => {
       const isValid = verifyMessage(
         message,
         signature,
-        Buffer.from(publicKey).toString('hex'),
+        base16.encode(publicKey),
       )
 
       if (!isValid) {
@@ -79,7 +80,7 @@ app.post('/provisionSession', async (c) => {
     const isValid = verifyMessage(
       message,
       signature,
-      Buffer.from(publicKey).toString('hex'),
+      base16.encode(publicKey),
     )
     if (!isValid) {
       return c.json({ success: false, message: 'Invalid signature' }, 400)

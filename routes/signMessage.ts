@@ -1,6 +1,5 @@
 import { ed25519 } from '@noble/curves/ed25519'
 import { blake3 } from '@noble/hashes/blake3'
-import { base64 } from '@scure/base'
 import { app } from '../app'
 import { messageDataToUint8Array } from '../buffers/buffers'
 import { kms } from '../clients/aws'
@@ -8,6 +7,7 @@ import { authDb } from '../database/watcher'
 import { selectKeysQuery, selectSessionQuery } from '../lib/queries'
 import { signWithEddsaKey } from '../utils/signatures'
 import { lucia } from '../lucia/auth'
+import { base16, base64 } from '@scure/base'
 
 import type { Message } from '../utils/types'
 import { isMessage } from '../utils/types'
@@ -52,7 +52,7 @@ app.post('/signMessages', async (c) => {
     // Decrypt the private key using AWS KMS
     const decryptedPrivateKey = await kms
       .decrypt({
-        CiphertextBlob: Buffer.from(encryptedprivatekey, 'base64'),
+        CiphertextBlob: base64.decode(encryptedprivatekey),
       })
       .promise()
 
@@ -79,8 +79,8 @@ app.post('/signMessages', async (c) => {
       const signature = signWithEddsaKey(message.hash, eddsaPrivateKey)
 
       const signerUInt8Array = ed25519.getPublicKey(eddsaPrivateKey)
-      const signer = Buffer.from(signerUInt8Array).toString('hex')
-
+      const signer = base16.encode(signerUInt8Array)
+      
       if (publickey !== signer) {
         return c.json({ success: false, message: 'Public key mismatch' }, 400)
       }

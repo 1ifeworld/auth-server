@@ -1,5 +1,4 @@
 import pg from 'pg'
-import { processHexString } from '../lib/helpers'
 
 const { Client } = pg
 

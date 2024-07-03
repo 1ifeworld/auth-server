@@ -2,8 +2,8 @@ import { alphabet, generateRandomString } from 'oslo/crypto'
 import { app } from '../app'
 import { authDb } from '../database/watcher'
 import { custodyAddress, publicKey } from '../lib/keys'
-import { selectDeviceQuery } from '../lib/queries'
-import { verifyMessage } from '../lib/signatures'
+import { selectDeviceQuery, insertKeysQuery } from '../lib/queries'
+import { verifyMessage } from '../utils/signatures'
 import { lucia } from '../lucia/auth'
 
 app.post('/provisionSession', async (c) => {
@@ -33,11 +33,13 @@ app.post('/provisionSession', async (c) => {
       }
 
       const { message, signature } = siweMsg
+
       const isValid = verifyMessage(
         message,
         signature,
         Buffer.from(publicKey).toString('hex'),
       )
+      
       if (!isValid) {
         return c.json({ success: false, message: 'Invalid signature' }, 400)
       }
@@ -48,10 +50,6 @@ app.post('/provisionSession', async (c) => {
       )
       userId = 10
 
-      const insertKeysQuery = `
-        INSERT INTO public.keys (userid, custodyAddress, deviceid)
-        VALUES ($1, $2, $3)
-      `
       await authDb.query(insertKeysQuery, [userId, custodyAddress, newDeviceId])
     }
 
@@ -92,7 +90,7 @@ app.post('/provisionSession', async (c) => {
         10,
         alphabet('a-z', 'A-Z', '0-9', '-', '_'),
       )
-      userId = 25 // Fixed user ID for new devices
+      userId = 25
 
       const insertKeysQuery = `
         INSERT INTO public.keys (userid, custodyAddress, deviceid)

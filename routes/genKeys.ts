@@ -8,7 +8,7 @@ import { app } from '../app'
 import { kms } from '../clients/aws'
 import { authDb } from '../database/watcher'
 import { KEY_REF, publicKey } from '../lib/keys'
-import { verifyMessage } from '../lib/signatures'
+import { verifyMessage } from '../utils/signatures'
 import { lucia } from '../lucia/auth'
 
 app.post('/genKeys', async (c) => {

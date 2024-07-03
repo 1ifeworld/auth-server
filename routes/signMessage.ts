@@ -6,25 +6,33 @@ import { messageDataToUint8Array } from '../buffers/buffers'
 import { kms } from '../clients/aws'
 import { authDb } from '../database/watcher'
 import { selectKeysQuery, selectSessionQuery } from '../lib/queries'
-import { signMessageWithKey } from '../lib/signatures'
+import { signWithEddsaKey } from '../utils/signatures'
 import { lucia } from '../lucia/auth'
 
 import type { Message } from '../utils/types'
 import { isMessage } from '../utils/types'
 
-app.post('/signMessage', async (c) => {
+app.post('/signMessages', async (c) => {
   try {
-    const { sessionId, message } = await c.req.json()
+    const { sessionId, messages } = await c.req.json()
 
-    if (!sessionId || !message) {
-      return c.json({ success: false, message: 'Missing parameters' }, 400)
+    if (!sessionId || !messages || !Array.isArray(messages)) {
+      return c.json(
+        { success: false, message: 'Missing or invalid parameters' },
+        400,
+      )
     }
 
-    if (!isMessage(message)) {
-      return c.json({ success: false, message: 'Invalid message format' }, 400)
+    for (const message of messages) {
+      if (!isMessage(message)) {
+        return c.json(
+          { success: false, message: 'Invalid message format' },
+          400,
+        )
+      }
     }
 
-    const { session, user } = await lucia.validateSession(sessionId)
+    const { session } = await lucia.validateSession(sessionId)
 
     if (!session) {
       return c.json({ success: false, message: 'Invalid session' }, 404)
@@ -33,10 +41,6 @@ app.post('/signMessage', async (c) => {
     const sessionResult = await authDb.query(selectSessionQuery, [sessionId])
     const { userid } = sessionResult.rows[0]
 
-    if (userid.toString() !== message.messageData.rid) {
-      return c.json({ success: false, message: 'RID mismatch' }, 400)
-    }
-
     const keysResult = await authDb.query(selectKeysQuery, [userid])
 
     if (keysResult.rows.length === 0) {
@@ -44,18 +48,6 @@ app.post('/signMessage', async (c) => {
     }
 
     const { encryptedprivatekey, publickey } = keysResult.rows[0]
-
-    console.log('HRE', publickey)
-
-    const computedHash = blake3(messageDataToUint8Array(message.messageData))
-
-    const computedHashBase64 = base64.encode(computedHash)
-    console.log({ computedHashBase64 })
-    console.log({ messagehash: message.hash })
-
-    if (computedHashBase64 !== message.hash) {
-      return c.json({ success: false, message: 'Invalid message hash' }, 400)
-    }
 
     // Decrypt the private key using AWS KMS
     const decryptedPrivateKey = await kms
@@ -71,28 +63,42 @@ app.post('/signMessage', async (c) => {
     const eddsaPrivateKey = new Uint8Array(
       decryptedPrivateKey.Plaintext as ArrayBuffer,
     )
-    const signature = signMessageWithKey(message.hash, eddsaPrivateKey)
-    const signerUInt8Array = ed25519.getPublicKey(eddsaPrivateKey)
-    const signer = Buffer.from(signerUInt8Array).toString('hex')
+    const signedMessages: Message[] = []
 
-    if (publickey !== signer) {
-      return
+    for (const message of messages) {
+      if (userid.toString() !== message.messageData.rid) {
+        return c.json({ success: false, message: 'RID mismatch' }, 400)
+      }
+
+      const computedHash = blake3(messageDataToUint8Array(message.messageData))
+
+      if (computedHash !== message.hash) {
+        return c.json({ success: false, message: 'Invalid message hash' }, 400)
+      }
+
+      const signature = signWithEddsaKey(message.hash, eddsaPrivateKey)
+
+      const signerUInt8Array = ed25519.getPublicKey(eddsaPrivateKey)
+      const signer = Buffer.from(signerUInt8Array).toString('hex')
+
+      if (publickey !== signer) {
+        return c.json({ success: false, message: 'Public key mismatch' }, 400)
+      }
+
+      const signedMessage: Message = {
+        signer,
+        messageType: message.messageType,
+        messageData: message.messageData,
+        hashType: message.hashType,
+        hash: message.hash,
+        sigType: 1,
+        sig: signature,
+      }
+
+      signedMessages.push(signedMessage)
     }
 
-    const signedMessage: Message = {
-      signer: signer,
-      messageType: 1,
-      messageData: message.messageData,
-      hashType: message.hashType,
-      hash: message.hash,
-      sigType: 1,
-      sig: Buffer.from(signature).toString('hex'),
-    }
-
-    return c.json({
-      success: true,
-      signedMessage,
-    })
+    return c.json({ success: true, signedMessages })
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred'
     if (error instanceof Error) {

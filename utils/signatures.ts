@@ -1,19 +1,14 @@
 import { ed25519 } from '@noble/curves/ed25519'
-import { privKeyBytes } from './keys'
+import type { Message } from '../utils/types'
 
-export function signMessage(message: string) {
-  const msg = new TextEncoder().encode(message)
-  const sig = ed25519.sign(msg, privKeyBytes)
-  return Buffer.from(sig).toString('hex')
-}
-
-export function signMessageWithKey(
+export function signWithEddsaKey(
   message: string,
   privateKey: Uint8Array,
-): string {
+): Uint8Array {
   const msg = new TextEncoder().encode(message)
   const sig = ed25519.sign(msg, privateKey)
-  return Buffer.from(sig).toString('hex')
+
+  return sig
 }
 
 export function verifyMessage(

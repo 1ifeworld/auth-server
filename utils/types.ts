@@ -40,24 +40,26 @@ export type Message = {
   messageType: MessageTypes
   messageData: MessageData
   hashType: HashTypes
-  hash: string
+  hash: Uint8Array
   sigType: SignatureTypes
-  sig: string
+  sig: Uint8Array
 }
 
 export function isMessage(data: Message): data is Message {
-  return (
-    typeof data.signer === 'string' &&
-    typeof data.messageData === 'object' &&
-    typeof data.hashType === 'number' &&
-    (data.hashType === 0 || data.hashType === 1) &&
-    typeof data.hash === 'string' &&
-    typeof data.sigType === 'number' &&
-    (data.sigType === 1 || data.sigType === 2) &&
-    typeof data.sig === 'string' &&
-    /^0x[0-9a-fA-F]+$/.test(data.sig)
-  )
-}
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      typeof data.signer === 'string' &&
+      typeof data.messageData === 'object' &&
+      !Array.isArray(data.messageData) && 
+      typeof data.hashType === 'number' &&
+      (data.hashType === 0 || data.hashType === 1) &&
+      data.hash instanceof Uint8Array && 
+      typeof data.sigType === 'number' &&
+      (data.sigType === 1 || data.sigType === 2) &&
+      data.sig instanceof Uint8Array 
+    )
+  }
 
 export type MessageData = {
   rid: bigint

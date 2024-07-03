@@ -47,7 +47,7 @@ async function ensureTablesExist() {
         userid NUMERIC PRIMARY KEY,
         "to" TEXT,
         recovery TEXT,
-        timestamp TIMESTAMP,
+        timestamp NUMERIC,
         log_addr TEXT,
         block_num NUMERIC
       )
@@ -68,12 +68,12 @@ async function ensureTablesExist() {
     await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.keys (
         userid NUMERIC NOT NULL REFERENCES public.users(userid),
-        custodyAddress TEXT NOT NULL,
+        custodyaddress TEXT NOT NULL,
         deviceid TEXT NOT NULL,
         publickey TEXT NOT NULL,
         encryptedprivatekey TEXT NOT NULL,
-        timestamp TIMESTAMP NOT NULL,
-        PRIMARY KEY (userid, custodyAddress, deviceid)
+        timestamp NUMERIC NOT NULL,
+        PRIMARY KEY (userid, custodyaddress, deviceid)
       )
     `)
 
@@ -108,19 +108,27 @@ async function checkAndReplicateData() {
       const res = await authDb.query(
         `
   INSERT INTO public.users (userid, "to", recovery, timestamp, log_addr, block_num)
-  SELECT * FROM unnest($1::NUMERIC[], $2::TEXT[], $3::TEXT[], $4::TIMESTAMP[], $5::TEXT[], $6::NUMERIC[])
+  SELECT * FROM unnest($1::NUMERIC[], $2::TEXT[], $3::TEXT[], $4::NUMERIC[], $5::TEXT[], $6::NUMERIC[])
   ON CONFLICT (userid) DO UPDATE
   SET "to" = EXCLUDED."to", recovery = EXCLUDED.recovery, timestamp = EXCLUDED.timestamp, log_addr = EXCLUDED.log_addr, block_num = EXCLUDED.block_num
   RETURNING *
 `,
         [
           queryResult.rows.map((row) => row.userid),
-          queryResult.rows.map((row) => row.to),
-          queryResult.rows.map((row) => row.recovery),
           queryResult.rows.map((row) =>
-            new Date(row.timestamp * 1000).toISOString(),
+            row.to.startsWith('0x') ? row.to : `0x${row.to.slice(2)}`,
           ),
-          queryResult.rows.map((row) => row.log_addr),
+          queryResult.rows.map((row) =>
+            row.recovery.startsWith('0x')
+              ? row.recovery
+              : `0x${row.recovery.slice(2)}`,
+          ),
+          queryResult.rows.map((row) => row.timestamp), 
+          queryResult.rows.map((row) =>
+            row.log_addr.startsWith('0x')
+              ? row.log_addr
+              : `0x${row.log_addr.slice(2)}`,
+          ),
           queryResult.rows.map((row) => row.block_num),
         ],
       )

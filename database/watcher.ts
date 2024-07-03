@@ -114,14 +114,14 @@ async function checkAndReplicateData() {
   SET "to" = EXCLUDED."to", recovery = EXCLUDED.recovery, timestamp = EXCLUDED.timestamp, log_addr = EXCLUDED.log_addr, block_num = EXCLUDED.block_num
   RETURNING *
 `,
-[
-  queryResult.rows.map((row) => row.userid),
-  queryResult.rows.map((row) => processHexString(row.to)),
-  queryResult.rows.map((row) => processHexString(row.recovery)),
-  queryResult.rows.map((row) => row.timestamp),
-  queryResult.rows.map((row) => processHexString(row.log_addr)),
-  queryResult.rows.map((row) => row.block_num),
-],
+        [
+          queryResult.rows.map((row) => row.userid),
+          queryResult.rows.map((row) => row.to),
+          queryResult.rows.map((row) => row.recovery),
+          queryResult.rows.map((row) => row.timestamp),
+          queryResult.rows.map((row) => row.log_addr),
+          queryResult.rows.map((row) => row.block_num),
+        ],
       )
       console.log('Data replicated:', res.rows)
     }

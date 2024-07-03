@@ -116,18 +116,20 @@ async function checkAndReplicateData() {
         [
           queryResult.rows.map((row) => row.userid),
           queryResult.rows.map((row) =>
-            row.to.startsWith('0x') ? row.to : `0x${row.to.slice(2)}`,
+            typeof row.to === 'string' && row.to.startsWith('0x')
+              ? row.to
+              : `0x${row.to}`,
           ),
           queryResult.rows.map((row) =>
-            row.recovery.startsWith('0x')
+            typeof row.recovery === 'string' && row.recovery.startsWith('0x')
               ? row.recovery
-              : `0x${row.recovery.slice(2)}`,
+              : `0x${row.recovery}`,
           ),
-          queryResult.rows.map((row) => row.timestamp), 
+          queryResult.rows.map((row) => row.timestamp),
           queryResult.rows.map((row) =>
-            row.log_addr.startsWith('0x')
+            typeof row.log_addr === 'string' && row.log_addr.startsWith('0x')
               ? row.log_addr
-              : `0x${row.log_addr.slice(2)}`,
+              : `0x${row.log_addr}`,
           ),
           queryResult.rows.map((row) => row.block_num),
         ],

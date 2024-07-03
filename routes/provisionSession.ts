@@ -39,7 +39,7 @@ app.post('/provisionSession', async (c) => {
         signature,
         Buffer.from(publicKey).toString('hex'),
       )
-      
+
       if (!isValid) {
         return c.json({ success: false, message: 'Invalid signature' }, 400)
       }

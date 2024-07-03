@@ -46,20 +46,20 @@ export type Message = {
 }
 
 export function isMessage(data: Message): data is Message {
-    return (
-      typeof data === 'object' &&
-      data !== null &&
-      typeof data.signer === 'string' &&
-      typeof data.messageData === 'object' &&
-      !Array.isArray(data.messageData) && 
-      typeof data.hashType === 'number' &&
-      (data.hashType === 0 || data.hashType === 1) &&
-      data.hash instanceof Uint8Array && 
-      typeof data.sigType === 'number' &&
-      (data.sigType === 1 || data.sigType === 2) &&
-      data.sig instanceof Uint8Array 
-    )
-  }
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof data.signer === 'string' &&
+    typeof data.messageData === 'object' &&
+    !Array.isArray(data.messageData) &&
+    typeof data.hashType === 'number' &&
+    (data.hashType === 0 || data.hashType === 1) &&
+    data.hash instanceof Uint8Array &&
+    typeof data.sigType === 'number' &&
+    (data.sigType === 1 || data.sigType === 2) &&
+    data.sig instanceof Uint8Array
+  )
+}
 
 export type MessageData = {
   rid: bigint

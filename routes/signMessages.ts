@@ -1,7 +1,7 @@
 import { ed25519 } from '@noble/curves/ed25519'
 import { blake3 } from '@noble/hashes/blake3'
 import { base16, base64 } from '@scure/base'
-import { bytesToHex } from 'viem'
+import { bytesToHex, type Hex } from 'viem'
 import { app } from '../app'
 import { messageDataToUint8Array } from '../lib/buffers'
 import { kms } from '../clients/aws'
@@ -75,11 +75,12 @@ app.post('/signMessages', async (c) => {
         blake3(messageDataToUint8Array(message.messageData)),
       )
 
-      if (computedHash.slice(2) !== message.hash) {
+      if (computedHash.slice(2) !== message.hash.slice(2)) {
         return c.json({ success: false, message: 'Invalid message hash' }, 400)
       }
-
-      const bytesSignature = signWithEddsaKey(message.hash, eddsaPrivateKey)
+      
+      const slicedPrefixHash = message.hash.slice(2) as Hex
+      const bytesSignature = signWithEddsaKey(slicedPrefixHash, eddsaPrivateKey)
       const signature = bytesToHex(bytesSignature)
 
       const signedMessage: Message = {

@@ -10,4 +10,3 @@ export function signWithEddsaKey(
 
   return sig
 }
-

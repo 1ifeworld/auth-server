@@ -72,10 +72,8 @@ app.post('/signMessages', async (c) => {
       )
 
       const computedHash = bytesToHex(
-        blake3(messageDataToUint8Array(message.messageData))
+        blake3(messageDataToUint8Array(message.messageData)),
       )
-
-      // console.log({computedHash: computedHash.slice(2)})
 
       if (computedHash.slice(2) !== message.hash) {
         return c.json({ success: false, message: 'Invalid message hash' }, 400)
@@ -83,11 +81,6 @@ app.post('/signMessages', async (c) => {
 
       const bytesSignature = signWithEddsaKey(message.hash, eddsaPrivateKey)
       const signature = bytesToHex(bytesSignature)
-
-      
-      // const verify = ed25519.verify(signature.slice(2), message.hash, publickey)
-
-      // console.log({verify})
 
       const signedMessage: Message = {
         signer: publickey,

@@ -11,12 +11,11 @@ import { lucia } from '../lucia/auth'
 import { signWithEddsaKey } from '../lib/signatures'
 import type { Message, RequestPayload } from '../lib/types'
 import { isMessage } from '../lib/types'
+import { sign } from 'viem/accounts'
 
 app.post('/signMessages', async (c) => {
   try {
     const { sessionId, messages } = (await c.req.json()) as RequestPayload
-
-    // maybe too much ..
 
     if (
       !sessionId ||
@@ -46,12 +45,13 @@ app.post('/signMessages', async (c) => {
       return c.json({ success: false, message: 'Keys not found' }, 404)
     }
 
-    const { encryptedPrivatekey, publicKey } = keysResult.rows[0]
-    const signerUInt8Array = base16.decode(publicKey)
+    // these are not camel cased because these are the names of the columns in the table
+
+    const { encryptedprivatekey, publickey } = keysResult.rows[0]
 
     const decryptedPrivateKey = await kms
       .decrypt({
-        CiphertextBlob: base64.decode(encryptedPrivatekey),
+        CiphertextBlob: base64.decode(encryptedprivatekey),
       })
       .promise()
 
@@ -71,24 +71,26 @@ app.post('/signMessages', async (c) => {
         decryptedPrivateKey.Plaintext as ArrayBuffer,
       )
 
-      const computedHash = blake3(messageDataToUint8Array(message.messageData))
+      const computedHash = bytesToHex(
+        blake3(messageDataToUint8Array(message.messageData))
+      )
 
-      if (
-        !computedHash.every((value, index) => value === message.hash[index])
-      ) {
+      // console.log({computedHash: computedHash.slice(2)})
+
+      if (computedHash.slice(2) !== message.hash) {
         return c.json({ success: false, message: 'Invalid message hash' }, 400)
       }
 
-      const signature = signWithEddsaKey(message.hash, eddsaPrivateKey)
+      const bytesSignature = signWithEddsaKey(message.hash, eddsaPrivateKey)
+      const signature = bytesToHex(bytesSignature)
 
-      const signer = bytesToHex(signerUInt8Array)
+      
+      // const verify = ed25519.verify(signature.slice(2), message.hash, publickey)
 
-      if (publicKey !== signer) {
-        return c.json({ success: false, message: 'Public key mismatch' }, 400)
-      }
+      // console.log({verify})
 
       const signedMessage: Message = {
-        signer,
+        signer: publickey,
         messageType: message.messageType,
         messageData: message.messageData,
         hashType: message.hashType,

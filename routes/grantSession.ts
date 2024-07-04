@@ -3,7 +3,6 @@ import { app } from '../app'
 import { authDb } from '../database/watcher'
 import { custodyAddress, publicKey } from '../lib/keys'
 import { selectDeviceQuery, insertKeysQuery } from '../lib/queries'
-import { verifyMessage } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
 import { base16 } from '@scure/base'
 

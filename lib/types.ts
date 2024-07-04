@@ -37,13 +37,13 @@ export enum SignatureTypes {
 }
 
 export type Message = {
-  signer: Hex
+  signer: string
   messageType: MessageTypes
   messageData: MessageData
   hashType: HashTypes
-  hash: Uint8Array
+  hash: Hex
   sigType: SignatureTypes
-  sig: Uint8Array
+  sig: Hex
 }
 
 export type RequestPayload = {
@@ -51,19 +51,23 @@ export type RequestPayload = {
   messages: Message[]
 }
 
-export function isMessage(data: Message): data is Message {
+export function isMessage(data: any): data is Message {
   return (
     typeof data === 'object' &&
     data !== null &&
-    typeof data.signer === 'string' &&
+    typeof data.messageType === 'number' &&
     typeof data.messageData === 'object' &&
     !Array.isArray(data.messageData) &&
+    typeof data.messageData.rid === 'string' &&
+    typeof data.messageData.timestamp === 'string' &&
+    typeof data.messageData.type === 'number' &&
+    typeof data.messageData.body === 'object' &&
     typeof data.hashType === 'number' &&
     (data.hashType === 0 || data.hashType === 1) &&
-    data.hash instanceof Uint8Array &&
+    typeof data.hash === 'string' &&
     typeof data.sigType === 'number' &&
     (data.sigType === 1 || data.sigType === 2) &&
-    data.sig instanceof Uint8Array
+    typeof data.sig === 'string'
   )
 }
 

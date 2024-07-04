@@ -3,21 +3,21 @@ import { blake3 } from '@noble/hashes/blake3'
 import { base16, base64 } from '@scure/base'
 import { bytesToHex } from 'viem'
 import { app } from '../app'
-import { messageDataToUint8Array } from '../buffers/buffers'
+import { messageDataToUint8Array } from '../lib/buffers'
 import { kms } from '../clients/aws'
 import { authDb } from '../database/watcher'
 import { selectKeysQuery, selectSessionQuery } from '../lib/queries'
 import { lucia } from '../lucia/auth'
-import { signWithEddsaKey } from '../utils/signatures'
-import type { Message, RequestPayload } from '../utils/types'
-import { isMessage } from '../utils/types'
+import { signWithEddsaKey } from '../lib/signatures'
+import type { Message, RequestPayload } from '../lib/types'
+import { isMessage } from '../lib/types'
 
 app.post('/signMessages', async (c) => {
   try {
     const { sessionId, messages } = (await c.req.json()) as RequestPayload
 
-    // maybe too much .. 
-    
+    // maybe too much ..
+
     if (
       !sessionId ||
       !messages ||
@@ -47,6 +47,17 @@ app.post('/signMessages', async (c) => {
     }
 
     const { encryptedPrivatekey, publicKey } = keysResult.rows[0]
+    const signerUInt8Array = base16.decode(publicKey)
+
+    const decryptedPrivateKey = await kms
+      .decrypt({
+        CiphertextBlob: base64.decode(encryptedPrivatekey),
+      })
+      .promise()
+
+    if (!decryptedPrivateKey.Plaintext) {
+      throw new Error('Decryption failed')
+    }
 
     for (const message of messages) {
       if (!isMessage(message)) {
@@ -54,16 +65,6 @@ app.post('/signMessages', async (c) => {
           { success: false, message: 'Invalid message format' },
           400,
         )
-      }
-
-      const decryptedPrivateKey = await kms
-        .decrypt({
-          CiphertextBlob: base64.decode(encryptedPrivatekey),
-        })
-        .promise()
-
-      if (!decryptedPrivateKey.Plaintext) {
-        throw new Error('Decryption failed')
       }
 
       const eddsaPrivateKey = new Uint8Array(
@@ -79,8 +80,6 @@ app.post('/signMessages', async (c) => {
       }
 
       const signature = signWithEddsaKey(message.hash, eddsaPrivateKey)
-
-      const signerUInt8Array = ed25519.getPublicKey(eddsaPrivateKey)
 
       const signer = bytesToHex(signerUInt8Array)
 

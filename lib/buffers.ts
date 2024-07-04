@@ -1,6 +1,6 @@
 import { blake3 } from '@noble/hashes/blake3'
 import { base64url } from '@scure/base'
-import type { MessageData } from '../utils/types'
+import type { MessageData } from '../lib/types'
 
 /**
  * @dev Serialize MessageData object into a Uint8Array

@@ -3,7 +3,7 @@ import { app } from '../app'
 import { authDb } from '../database/watcher'
 import { custodyAddress, publicKey } from '../lib/keys'
 import { selectDeviceQuery, insertKeysQuery } from '../lib/queries'
-import { verifyMessage } from '../utils/signatures'
+import { verifyMessage } from '../lib/signatures'
 import { lucia } from '../lucia/auth'
 import { base16 } from '@scure/base'
 
@@ -11,12 +11,14 @@ app.post('/grantSession', async (c) => {
   try {
     const { userId } = await c.req.json()
 
-    console.log('Received',  userId)
+    console.log('Received', userId)
 
     // Create new session for cases 1 and 2b
     const expiresAt = new Date(Date.now() + 2 * 7 * 24 * 60 * 60 * 1000)
-    const deviceId = generateRandomString(10, alphabet('a-z', 'A-Z', '0-9', '-', '_'),
-  )
+    const deviceId = generateRandomString(
+      10,
+      alphabet('a-z', 'A-Z', '0-9', '-', '_'),
+    )
     const created = new Date(Date.now())
     const session = await lucia.createSession(userId.toString(), {
       userId,

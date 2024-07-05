@@ -1,4 +1,5 @@
 import { app } from '../app'
+import { cors } from 'hono/cors'
 
 app.get('/', async (c) => {
   const htmlContent = `

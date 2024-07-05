@@ -4,14 +4,14 @@ import { db } from '../clients/db'
 import * as dbSchema from '../database/schema'
 
 export interface UserAttributes {
-  userId: number
+  userId: bigint
   to: string
   recovery: string
   timestamp: string
 }
 
 export interface SessionAttributes {
-  userId: number
+  userId: bigint
   deviceId: string
   created: Date
   expiresAt: Date

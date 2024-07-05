@@ -1,28 +1,12 @@
-import type { Hex } from 'viem'
-
 /*
  *
  *   MESSAGE TYPES
  *
  */
 
-export enum MessageTypes {
-  NONE = 0,
-  CHANNEL_CREATE = 1,
-  CHANNEL_EDIT_MEMBERS = 2,
-  CHANNEL_EDIT_URI = 3,
-  CHANNEL_TRANSFER_OWNER = 4,
-  ITEM_CREATE = 5,
-  ITEM_EDIT = 6,
-  ITEM_DELETE = 7,
-  ITEM_SUBMIT = 8,
-  ITEM_ACC_REJ = 9,
-  ITEM_REMOVE = 10,
-  COMMENT_CREATE = 11,
-  COMMENT_EDIT = 12,
-  COMMENT_DELETE = 13,
-  USER_SET_NAME = 14,
-  USER_SET_URI = 15,
+export type RequestPayload = {
+  sessionId: string
+  messages: string
 }
 
 export enum HashTypes {
@@ -36,38 +20,44 @@ export enum SignatureTypes {
   EIP712 = 2,
 }
 
+export enum MessageTypes {
+  NONE = 0,
+  CHANNEL_CREATE = 1,
+  CHANNEL_EDIT = 2,
+  CHANNEL_DELETE = 3,
+  CHANNEL_INVITE_MEMBER = 4,
+  CHANNEL_TRANSFER_OWNER = 5,
+  ITEM_CREATE = 6,
+  ITEM_EDIT = 7,
+  ITEM_DELETE = 8,
+  ITEM_SUBMIT = 9,
+  ITEM_REMOVE = 10,
+  COMMENT_CREATE = 11,
+  COMMENT_EDIT = 12,
+  COMMENT_DELETE = 13,
+  USER_SET_NAME = 14,
+  USER_SET_DATA = 15, // initially we just support setting a bio capped to specific char count. could eventually support URI schema
+  USER_INVITE_FRIEND = 16,
+  GENERIC_RESPONSE = 17,
+}
+
 export type Message = {
-  signer: string
-  messageType: MessageTypes
+  signer: Uint8Array
   messageData: MessageData
   hashType: HashTypes
-  hash: Hex
+  hash: Uint8Array
   sigType: SignatureTypes
-  sig: Hex
+  sig: Uint8Array
 }
 
-export type RequestPayload = {
-  sessionId: string
-  messages: Message[]
-}
-
-export function isMessage(data: any): data is Message {
+export function isMessage(data: Message): data is Message {
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof data.messageType === 'number' &&
-    typeof data.messageData === 'object' &&
-    !Array.isArray(data.messageData) &&
-    typeof data.messageData.rid === 'string' &&
-    typeof data.messageData.timestamp === 'string' &&
-    typeof data.messageData.type === 'number' &&
-    typeof data.messageData.body === 'object' &&
-    typeof data.hashType === 'number' &&
-    (data.hashType === 0 || data.hashType === 1) &&
-    typeof data.hash === 'string' &&
-    typeof data.sigType === 'number' &&
-    (data.sigType === 1 || data.sigType === 2) &&
-    typeof data.sig === 'string'
+    data.signer instanceof Uint8Array &&
+    isMessageData(data.messageData) &&
+    Object.values(HashTypes).includes(data.hashType) &&
+    data.hash instanceof Uint8Array &&
+    Object.values(SignatureTypes).includes(data.sigType) &&
+    data.sig instanceof Uint8Array
   )
 }
 
@@ -76,6 +66,18 @@ export type MessageData = {
   timestamp: bigint
   type: MessageTypes
   body: MessageDataBodyTypes
+}
+
+// Add the necessary type check for MessageData
+function isMessageData(data: any): data is MessageData {
+  return (
+    typeof data === 'object' &&
+    typeof data.rid === 'bigint' &&
+    typeof data.timestamp === 'bigint' &&
+    Object.values(MessageTypes).includes(data.type) &&
+    // TODO: add type checking to make sure this is a real messageDataBodyType
+    typeof data.body === 'object'
+  )
 }
 
 /*
@@ -104,32 +106,36 @@ export function isChannelCreateBody(obj: unknown): obj is ChannelCreateBody {
 /*
  * 2
  */
-export type ChannelEditMember = {
-  channelId: string
-  member: {
-    rid: bigint
-    role: 0 | 1 | 2 // 0 = none, 1 = member, 2 = admin
-  }
-}
-
-/*
- * 3
- */
-export type ChannelEditUri = {
+export type ChannelEditBody = {
   channelId: string
   uri: string
 }
 
 /*
+ * 3
+ */
+export type ChannelDeleteBody = {
+  channelId: string
+}
+
+/*
  * 4
  */
-export type ChannelTransferOwner = {
+export type ChannelInviteMemberBody = {
+  channelId: string
+  memberRid: bigint
+}
+
+/*
+ * 5
+ */
+export type ChannelTransferOwnerBody = {
   channelId: string
   transferToRid: bigint
 }
 
 /*
- * 5
+ * 6
  */
 export type ItemCreateBody = {
   uri: string
@@ -146,7 +152,7 @@ export function isItemCreateBody(obj: unknown): obj is ItemCreateBody {
 }
 
 /*
- * 6
+ * 7
  */
 export type ItemEditBody = {
   itemId: string
@@ -154,19 +160,19 @@ export type ItemEditBody = {
 }
 
 /*
- * 7
+ * 8
  */
 export type ItemDeleteBody = {
   itemId: string
 }
 
 /*
- * 8
+ * 9
  */
 export type ItemSubmitBody = {
   itemId: string
   channelId: string
-  caption?: string // MAX 300 CHAR LIMIT
+  text?: string // MAX 300 CHAR LIMIT
 }
 
 export function isItemSubmitBody(obj: unknown): obj is ItemSubmitBody {
@@ -179,35 +185,9 @@ export function isItemSubmitBody(obj: unknown): obj is ItemSubmitBody {
   return (
     typeof messageBody.itemId === 'string' &&
     typeof messageBody.channelId === 'string' &&
-    (messageBody.caption === undefined ||
-      (typeof messageBody.caption === 'string' &&
-        messageBody.caption.length <= 300))
+    (messageBody.text === undefined ||
+      (typeof messageBody.text === 'string' && messageBody.text.length <= 300))
   )
-}
-
-/*
- * 9
- */
-
-export function isItemAccRejBody(obj: unknown): obj is ItemAccRejBody {
-  if (typeof obj !== 'object' || obj === null) {
-    return false
-  }
-
-  const messageBody = obj as Partial<ItemAccRejBody>
-
-  return (
-    typeof messageBody.submissionId === 'string' &&
-    typeof messageBody.response === 'boolean' &&
-    (messageBody.caption === undefined ||
-      (typeof messageBody.caption === 'string' &&
-        messageBody.caption.length <= 300))
-  )
-}
-export type ItemAccRejBody = {
-  submissionId: string
-  response: boolean // FALSE = rejected, TRUE = accepted
-  caption?: string // MAX_CHAR_LIMIT = 300
 }
 
 /*
@@ -243,28 +223,47 @@ export type CommentDeleteBody = {
 /*
  * 14
  */
+// TODO: set up the protocol logic for handling this correectly
+// based off how we are currently doing it in username DB
 export type UserSetNameBody = {
-  fromId: bigint
-  toId: bigint
-  username: string // MAX_CHAR_LIMIT = 15 + regex
+  fromRid?: bigint
+  toRid?: bigint
+  username?: string // MAX_CHAR_LIMIT = 15 + regex
 }
 
 /*
  * 15
  */
-export type UserSetUriBody = {
+export type UserSetDataBody = {
   rid: bigint
-  uri: string
+  data: string // initially just support pure text "bios" of a max length
 }
 
-export interface AuthReq {
-  deviceId: string
-  sessionId: string
-  siweMsg: {
-    custodyAddress: Hex
-    message: string
-    signature: Uint8Array
-  }
+/*
+ * 16
+ */
+export type UserInviteFriendBody = {
+  rid: bigint
+}
+
+/*
+ * 17
+ */
+export type GenericResponseBody = {
+  messageId: string
+  response: boolean
+}
+
+export function isGenericResponse(obj: unknown): obj is GenericResponseBody {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'messageId' in obj &&
+    typeof (obj as { messageId: unknown }).messageId === 'string' &&
+    'response' in obj &&
+    ((obj as { response: unknown }).response === 0 ||
+      (obj as { response: unknown }).response === 1)
+  )
 }
 
 /*
@@ -272,19 +271,21 @@ export interface AuthReq {
  */
 export type MessageDataBodyTypes =
   | ChannelCreateBody
-  | ChannelEditMember
-  | ChannelEditUri
-  | ChannelTransferOwner
+  | ChannelEditBody
+  | ChannelInviteMemberBody
+  | ChannelTransferOwnerBody
   | ItemCreateBody
   | ItemEditBody
   | ItemDeleteBody
   | ItemSubmitBody
-  | ItemAccRejBody
   | ItemRemoveBody
   | CommentCreateBody
   | CommentEditBody
   | CommentDeleteBody
   | UserSetNameBody
-  | UserSetUriBody
+  | UserSetDataBody
+  | UserSetDataBody
+  | GenericResponseBody
 
 export const CAPTION_MAX_LENGTH = 300
+export const BIO_MAX_LENGTH = 50

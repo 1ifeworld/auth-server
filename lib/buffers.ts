@@ -1,80 +1,80 @@
+import type {
+  MessageData,
+  Message,
+  MessageTypes,
+  MessageDataBodyTypes,
+  HashTypes,
+  SignatureTypes,
+} from './types.js'
 import { blake3 } from '@noble/hashes/blake3'
-import { base64url } from '@scure/base'
-import type { MessageData } from '../lib/types'
+import { base64 } from '@scure/base'
+import * as dagCbor from '@ipld/dag-cbor'
+import * as Block from 'multiformats/block'
+import { sha256 } from 'multiformats/hashes/sha2'
 
-/**
- * @dev Serialize MessageData object into a Uint8Array
- */
+export async function messageDataToCid(messageData: MessageData) {
+  const block = await Block.encode({
+    value: messageData,
+    codec: dagCbor,
+    hasher: sha256,
+  })
+  return block.cid
+}
 
-// shout out 0xTranqui
-
-export function messageDataToUint8Array(message: MessageData): Uint8Array {
-  const jsonString = JSON.stringify(message, (key, value) =>
+export function messageDataToHash(messagData: MessageData): Uint8Array {
+  const bodyToJsonString = JSON.stringify(messagData, (key, value) =>
     typeof value === 'bigint' ? value.toString() : value,
   )
   const encoder = new TextEncoder()
-  return encoder.encode(jsonString)
+  const encodedJsonString = encoder.encode(bodyToJsonString)
+  const hash = blake3(encodedJsonString)
+  return hash
 }
 
-/**
- * @dev Deserialize Uint8Array into MessageData object
- */
+export function serializeMessageForHttp(message: Message): string {
+  const encodedMessage = {
+    signer: base64.encode(message.signer),
+    messageData: {
+      rid: message.messageData.rid.toString(), // bigint to string conversion
+      timestamp: message.messageData.timestamp.toString(), // bigint to string conversion
+      type: message.messageData.type,
+      body: message.messageData.body,
+    },
+    hashType: message.hashType,
+    hash: base64.encode(message.hash),
+    sigType: message.sigType,
+    sig: base64.encode(message.sig),
+  }
 
-export function uint8ArrayToMessageData(uint8Array: Uint8Array): MessageData {
-  const decoder = new TextDecoder()
-  const jsonString = decoder.decode(uint8Array)
-  return JSON.parse(jsonString, (key, value) =>
-    key === 'rid' || key === 'timestamp' ? BigInt(value) : value,
-  )
+  return JSON.stringify(encodedMessage)
 }
 
-/**
- * @dev Calculate cid hash from serialized messageData object
- * @notice blake3 default length is 32 bytes but hardcoded for readability
- */
-export function messageDataToCid(messageData: MessageData): Uint8Array {
-  const serializedMessageData = messageDataToUint8Array(messageData)
-  return blake3(serializedMessageData, { dkLen: 32 })
-}
-
-/**
- * @dev Convert cid to base64Url multicodec for ipfs CIDv1 compatability (???)
- */
-// export function cidAsBase64UrlMulticodec(cid: Uint8Array): string {
-//   // raw inner data: cid version 1, raw multicodec 0x55, blake3 multihash 0x1e, len of 32
-//   const prefixBytes = new Uint8Array([0x01, 0x55, 0x1e, 0x20])
-//   // This creates a new Uint8Array with a length equal to length of prefix and cid lengths. The array is initialized with zeros.
-//   const combinedBytes = new Uint8Array(prefixBytes.length + cid.length)
-//   // This copies the values from prefix into combined, starting at index 0. After this operation, the first four bytes of combined will be [0x01, 0x55, 0x1e, 0x20].
-//   combinedBytes.set(prefixBytes)
-//   // This appends the cid bytes immediately after the prefix bytes.
-//   combinedBytes.set(cid, prefixBytes.length)
-//   // Convert bytes to base64Url and prepend with 'u'
-//   return "u" + base64url(combinedBytes)
-// }
-
-/**
- * @dev Convert base64Url multicodec back to cid hash
- */
-// export function base64UrlMulticodecToCid(base64Url: string): Uint8Array {
-//   // Remove the 'u' prefix
-//   const base64UrlWithoutPrefix = base64Url.slice(1)
-//   // Decode the Base64URL string to a Uint8Array
-//   const combinedBytes: Uint8Array = base64url.toBuffer(base64UrlWithoutPrefix)
-//   // Return extracted CID bytes by removing the prefix
-//   return combinedBytes.slice(4)
-// }
-
-/*
-    // NOTE: removed multiformats block encoding for now after swapping in blake3
-    import * as Block from "multiformats/block"
-    import * as dagCbor from "@ipld/dag-cbor"
-    import { sha256 } from "multiformats/hashes/sha2"
-
-    // @dev Use this to turn unstructured data in multiformats blocks Cids. Useful for large files + objects
-    // @dev To then get the CID, you can call {block}.cid.toString()
-    // @example const messageCid = (await encodeBlock()).cid.toString()
-    export async function encodeBlock(value: unknown) {
-        return await Block.encode({ value, codec: dagCbor, hasher: sha256 })
+export function deserializeMessageForHttp(jsonString: string): Message {
+  const encodedMessage: {
+    signer: string
+    messageData: {
+      rid: string
+      timestamp: string
+      type: MessageTypes
+      body: MessageDataBodyTypes
     }
-*/
+    hashType: HashTypes
+    hash: string
+    sigType: SignatureTypes
+    sig: string
+  } = JSON.parse(jsonString)
+
+  return {
+    signer: base64.decode(encodedMessage.signer),
+    messageData: {
+      rid: BigInt(encodedMessage.messageData.rid),
+      timestamp: BigInt(encodedMessage.messageData.timestamp),
+      type: encodedMessage.messageData.type,
+      body: encodedMessage.messageData.body,
+    },
+    hashType: encodedMessage.hashType,
+    hash: base64.decode(encodedMessage.hash),
+    sigType: encodedMessage.sigType,
+    sig: base64.decode(encodedMessage.sig),
+  }
+}

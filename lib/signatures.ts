@@ -3,7 +3,7 @@ import { base16 } from '@scure/base'
 import type { Hex } from 'viem'
 
 export function signWithEddsaKey(
-  message: Hex,
+  message: Uint8Array,
   privateKey: Uint8Array,
 ): Uint8Array {
   const sig = ed25519.sign(message, privateKey)

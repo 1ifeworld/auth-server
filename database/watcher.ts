@@ -44,10 +44,10 @@ async function ensureTablesExist() {
     // Create users table
     await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.users (
-        userid NUMERIC PRIMARY KEY,
+        userid INTEGER PRIMARY KEY,
         "to" TEXT,
         recovery TEXT,
-        timestamp NUMERIC,
+        timestamp INTEGER,
         log_addr TEXT,
         block_num NUMERIC
       )
@@ -57,7 +57,7 @@ async function ensureTablesExist() {
     await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.sessions (
         id TEXT PRIMARY KEY,
-        userid NUMERIC NOT NULL REFERENCES public.users(userid),
+        userid INTEGER NOT NULL REFERENCES public.users(userid),
         deviceid TEXT NOT NULL,
         created TIMESTAMP,
         expiresAt TIMESTAMP NOT NULL
@@ -67,12 +67,12 @@ async function ensureTablesExist() {
     // Create keys table
     await authDb.query(`
       CREATE TABLE IF NOT EXISTS public.keys (
-        userid NUMERIC NOT NULL REFERENCES public.users(userid),
+        userid INTEGER NOT NULL REFERENCES public.users(userid),
         custodyaddress TEXT NOT NULL,
         deviceid TEXT NOT NULL,
         publickey TEXT NOT NULL,
         encryptedprivatekey TEXT NOT NULL,
-        timestamp NUMERIC NOT NULL,
+        timestamp INTEGER NOT NULL,
         PRIMARY KEY (userid, custodyaddress, deviceid)
       )
     `)
@@ -108,7 +108,7 @@ async function checkAndReplicateData() {
       const res = await authDb.query(
         `
   INSERT INTO public.users (userid, "to", recovery, timestamp, log_addr, block_num)
-  SELECT * FROM unnest($1::NUMERIC[], $2::TEXT[], $3::TEXT[], $4::NUMERIC[], $5::TEXT[], $6::NUMERIC[])
+  SELECT * FROM unnest($1::INTEGER[], $2::TEXT[], $3::TEXT[], $4::INTEGER[], $5::TEXT[], $6::NUMERIC[])
   ON CONFLICT (userid) DO UPDATE
   SET "to" = EXCLUDED."to", recovery = EXCLUDED.recovery, timestamp = EXCLUDED.timestamp, log_addr = EXCLUDED.log_addr, block_num = EXCLUDED.block_num
   RETURNING *

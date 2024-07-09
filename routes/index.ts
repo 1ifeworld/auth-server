@@ -1,7 +1,5 @@
-import './signMessage'
-import './genKeysAndSession'
-import './SignWithSession'
-import './provisionSession'
-import { app } from '../server'
+import { app } from '../app'
 
-export { app }
+import './signMessages'
+import './grantSession'
+import './middleware'

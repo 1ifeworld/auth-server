@@ -4,14 +4,14 @@ import { db } from '../clients/db'
 import * as dbSchema from '../database/schema'
 
 export interface UserAttributes {
-  userId: number
+  userId: bigint
   to: string
   recovery: string
   timestamp: string
 }
 
 export interface SessionAttributes {
-  userId: number
+  userId: bigint
   deviceId: string
   created: Date
   expiresAt: Date
@@ -26,6 +26,7 @@ const adapter = new DrizzlePostgreSQLAdapter(
 export const lucia = new Lucia<SessionAttributes, UserAttributes>(adapter, {
   sessionExpiresIn: new TimeSpan(2, 'w'),
   sessionCookie: {
+    name: 'AYO THIS IS A GALLETA I MADE',
     expires: false,
     attributes: {
       secure: true,
@@ -81,7 +82,6 @@ declare module 'lucia' {
 
 //   return { validatedSession, user, headers }
 // }
-
 // createAndValidateSession('initialSessionId').then(({ validatedSession, user, headers }) => {
 //   console.log('Validated Session:', validatedSession)
 //   console.log('User:', user)
